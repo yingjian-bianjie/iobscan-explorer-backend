@@ -81,5 +81,9 @@ DenomSchema.statics = {
             time:denom.createTime,
             update_time: getTimestamp(),
         });
-    }
+    },
+
+    async findOneByDenomAndNftIdFromDenom(denomId: string): Promise<IDenomStruct> {
+        return await this.findOne({ denom_id: denomId}, {'_id': 0,'update_time': 0,'create_time': 0})
+    },
 };

@@ -13,6 +13,7 @@ export const PubkeySchema = new mongoose.Schema({
     create_time:Number
 })
 PubkeySchema.index({identities_id:1,pubkey_hash: 1},{unique: true})
+PubkeySchema.index({identities_id:1,height: 1})
 
 PubkeySchema.statics = {
     async insertPubkey (pubkey) {
@@ -27,7 +28,7 @@ PubkeySchema.statics = {
         queryParameters.identities_id = query.id
         result.data = await this.find(queryParameters)
           .skip((Number(query.pageNum) - 1) * Number(query.pageSize))
-          .limit(Number(query.pageSize)).sort({'time':-1});
+          .limit(Number(query.pageSize)).sort({'height':-1});
 
         if (query.useCount && query.useCount == true) {
             result.count = await this.find(queryParameters).countDocuments();

@@ -1,7 +1,6 @@
 import * as mongoose from 'mongoose';
 import {moduleStakingBondDenom, signedBlocksWindow} from "../constant";
 import {IParameters} from "../types/schemaTypes/parameters.interface";
-import {flDuplicateKeyInErrorLog} from "../util/util";
 
 export const ParametersSchema = new mongoose.Schema({
     module: String,
@@ -11,31 +10,27 @@ export const ParametersSchema = new mongoose.Schema({
     update_time: Number,
 })
 
-ParametersSchema.index({module: 1, key: 1}, {unique: true})
+ParametersSchema.index({module:1,key: 1},{unique: true})
 
 ParametersSchema.statics = {
 
-    async insertParameters(Parameters: IParameters) {
-        await this.insertMany(Parameters, {ordered: false}, (error) => {
-            if (!flDuplicateKeyInErrorLog(error)) {
-                console.log(error)
-            }
-        })
+    async insertParameters(Parameters:IParameters){
+        await this.insertMany(Parameters,{ ordered: false })
     },
 
-    async updateParameters(updateParameters: IParameters) {
-        const {cur_value, update_time} = updateParameters
-        await this.updateOne({cur_value}, {cur_value, update_time})
+    async updateParameters(updateParameters:IParameters){
+        const {cur_value,update_time} = updateParameters
+        await this.updateOne({cur_value},{cur_value,update_time})
     },
 
-    async queryAllParameters() {
-        return await this.find({}).select({'_id': 0, '__v': 0})
+    async queryAllParameters(){
+        return await this.find({}).select({'_id':0,'__v':0})
     },
 
-    async querySignedBlocksWindow(moduleName: string) {
-        return await this.findOne({module: moduleName, key: signedBlocksWindow}).select({'_id': 0, '__v': 0})
+    async querySignedBlocksWindow(moduleName:string){
+        return await this.findOne({module:moduleName,key:signedBlocksWindow}).select({'_id':0,'__v':0})
     },
-    async queryStakingToken(moduleName: string) {
-        return await this.findOne({module: moduleName, key: moduleStakingBondDenom}).select({'_id': 0, '__v': 0})
+    async queryStakingToken(moduleName:string){
+        return await this.findOne({module:moduleName,key:moduleStakingBondDenom}).select({'_id':0,'__v':0})
     }
 }

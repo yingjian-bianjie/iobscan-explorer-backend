@@ -30,7 +30,6 @@ import {StakingModule} from "./module/staking.module";
 import { TokensTaskModule } from "./module/tokens.task.module";
 import { AssetModule } from './module/asset.module';
 
-console.log(cfg);
 const url: string = `mongodb://${cfg.dbCfg.user}:${cfg.dbCfg.psd}@${cfg.dbCfg.dbAddr}/${cfg.dbCfg.dbName}`;
 const params = {
     imports: [

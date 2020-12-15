@@ -249,7 +249,7 @@ export class TokensLcdDto {
     owner: string;
     is_main_token: boolean;
     total_supply: string;
-    mint_token_time: number
+    mint_token_height: number
     
     constructor(value) {
         this['@type'] = value['@type'] || '';
@@ -263,7 +263,7 @@ export class TokensLcdDto {
         this.owner = value.owner || '';
         this.is_main_token = value.is_main_token || false;
         this.total_supply = value.initial_supply || '';
-        this.mint_token_time = value.mint_token_time || 0;
+        this.mint_token_height = value.mint_token_height || 0;
     }
 
     static bundleData(value: any = []): TokensLcdDto[] {

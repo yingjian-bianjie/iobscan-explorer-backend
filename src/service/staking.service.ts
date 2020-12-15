@@ -99,7 +99,7 @@ export default class StakingService {
         if (q.useCount) {
             result.count = count
         }
-        if (resultData.length < q.pageSize) {
+        if (resultData.length <= q.pageSize) {
             result.data = ValidatorDelegationsResDto.bundleData(resultData)
         } else {
             let pageNationData = pageNation(resultData, q.pageSize)
@@ -128,7 +128,7 @@ export default class StakingService {
         if (q.useCount) {
             result.count = count
         }
-        if (resultData.length < q.pageSize) {
+        if (resultData.length <= q.pageSize) {
             result.data = ValidatorUnBondingDelegationsResDto.bundleData(resultData)
         } else {
             let pageNationData = pageNation(resultData, q.pageSize)

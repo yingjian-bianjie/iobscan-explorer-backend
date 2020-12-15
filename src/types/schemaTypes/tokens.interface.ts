@@ -10,5 +10,5 @@ export interface ITokens {
     owner:string;
     name: string;
     total_supply: string;
-    mint_token_time:number
+    mint_token_height:number
 }

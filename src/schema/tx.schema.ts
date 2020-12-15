@@ -40,25 +40,29 @@ export const TxSchema = new mongoose.Schema({
     fee: Object,
     tx_index: Number,
 }, { versionKey: false });
+TxSchema.index({ time: -1, "msgs.type": -1,status:-1 }, { background: true });
+TxSchema.index({ addrs: -1, time: -1, "msgs.type": -1,status:-1 }, { background: true });
+TxSchema.index({"msgs.type": -1,height:-1,"msgs.msg.ex.service_name":-1 }, { background: true });
+
 
 //	csrb 浏览器交易记录过滤正则表达式
-function filterExTxTypeRegExp(): object {
-    let RegExpStr:string = Cache.supportTypes.join('|');
-    return new RegExp(RegExpStr || '//');
-}
+// function filterExTxTypeRegExp(): object {
+//     let RegExpStr: string = Cache.supportTypes.join('|');
+//     return new RegExp(RegExpStr || '//');
+// }
 
-function filterTxTypeRegExp(types: TxType[]): object {
-    if (!Array.isArray(types) || types.length === 0) return;
-    let typeStr: string = ``;
-    types.forEach((type: TxType) => {
-        if (!typeStr) {
-            typeStr = `${type}`;
-        } else {
-            typeStr += `|${type}`;
-        }
-    });
-    return new RegExp(typeStr);
-}
+// function filterTxTypeRegExp(types: TxType[]): object {
+//     if (!Array.isArray(types) || types.length === 0) return;
+//     let typeStr: string = ``;
+//     types.forEach((type: TxType) => {
+//         if (!typeStr) {
+//             typeStr = `${type}`;
+//         } else {
+//             typeStr += `|${type}`;
+//         }
+//     });
+//     return new RegExp(typeStr);
+// }
 
 
 // 	txs
@@ -68,7 +72,10 @@ TxSchema.statics.queryTxList = async function(query: ITxsQuery): Promise<IListSt
     if (query.type && query.type.length) {
         queryParameters['msgs.type'] = query.type;
     } else {
-        queryParameters.$or = [{ 'msgs.type' : filterExTxTypeRegExp() }];
+        // queryParameters.$or = [{ 'msgs.type': filterExTxTypeRegExp() }];
+        queryParameters['msgs.type'] = {
+            $in: Cache.supportTypes || []
+        }
     }
     if (query.status && query.status.length) {
         switch (query.status) {
@@ -224,12 +231,13 @@ TxSchema.statics.queryTxListByHeightEdge = async function(height:number, pageNum
 // 	txs/blocks
 TxSchema.statics.queryTxWithHeight = async function(query: ITxsWithHeightQuery): Promise<IListStruct> {
     let result: IListStruct = {};
-    let queryParameters: { height?: number, $or: object[] } = { $or: [{ 'msgs.type': filterExTxTypeRegExp() }] };
+    // let queryParameters: { height?: number, $or: object[] } = { $or: [{ 'msgs.type': filterExTxTypeRegExp() }] };
+    let queryParameters: { height?: number, 'msgs.type': object } = { 'msgs.type': { $in: Cache.supportTypes || [] } };
     if (query.height) {
         queryParameters.height = Number(query.height);
     }
     result.data = await this.find(queryParameters, dbRes.txList)
-        .sort({ time: -1 })
+        .sort({ height: -1 })
         .skip((Number(query.pageNum) - 1) * Number(query.pageSize))
         .limit(Number(query.pageSize));
     if (query.useCount && query.useCount == true) {
@@ -255,7 +263,10 @@ TxSchema.statics.queryTxWithAddress = async function(query: ITxsWithAddressQuery
     if (query.type && query.type.length) {
         queryParameters['msgs.type'] = query.type;
     } else {
-        queryParameters.$or = [{ 'msgs.type': filterExTxTypeRegExp() }];
+        // queryParameters.$or = [{ 'msgs.type': filterExTxTypeRegExp() }];
+        queryParameters['msgs.type'] = {
+            $in: Cache.supportTypes || []
+        }
     }
     if (query.status && query.status.length) {
         switch (query.status) {
@@ -268,7 +279,7 @@ TxSchema.statics.queryTxWithAddress = async function(query: ITxsWithAddressQuery
         }
     }
     result.data = await this.find(queryParameters, dbRes.txList)
-        .sort({ time: -1 })
+        .sort({ height: -1 })
         .skip((Number(query.pageNum) - 1) * Number(query.pageSize))
         .limit(Number(query.pageSize));
     if (query.useCount && query.useCount == true) {
@@ -293,7 +304,10 @@ TxSchema.statics.queryTxWithContextId = async function(query: ITxsWithContextIdQ
     if (query.type && query.type.length) {
         queryParameters['msgs.type'] = query.type;
     } else {
-        queryParameters.$or = [{ 'msgs.type': filterExTxTypeRegExp() }];
+        // queryParameters.$or = [{ 'msgs.type': filterExTxTypeRegExp() }];
+        queryParameters['msgs.type'] = {
+            $in: Cache.supportTypes || []
+        }
     }
 
     if (query.status && query.status.length) {
@@ -307,7 +321,7 @@ TxSchema.statics.queryTxWithContextId = async function(query: ITxsWithContextIdQ
         }
     }
     result.data = await this.find(queryParameters, dbRes.service)
-        .sort({ time: -1 })
+        .sort({ height: -1 })
         .skip((Number(query.pageNum) - 1) * Number(query.pageSize))
         .limit(Number(query.pageSize));
     if (query.useCount && query.useCount == true) {
@@ -325,8 +339,8 @@ TxSchema.statics.queryTxWithNft = async function(query: ITxsWithNftQuery): Promi
         TxType.transfer_nft,
         TxType.burn_nft,
     ];
-
-    let queryParameters: { 'msgs.msg.denom'?: string, 'msgs.msg.id'?: string, $or: object[] } = { $or: [{ 'msgs.type': filterTxTypeRegExp(nftTypesList) }] };
+    // let queryParameters: { 'msgs.msg.denom'?: string, 'msgs.msg.id'?: string, $or: object[] } = { $or: [{ 'msgs.type': filterTxTypeRegExp(nftTypesList) }] };
+    let queryParameters: { 'msgs.msg.denom'?: string, 'msgs.msg.id'?: string, 'msgs.type': object } = { 'msgs.type': { $in: nftTypesList || [] }};
     if (query.denomId && query.denomId.length) {
         queryParameters['msgs.msg.denom'] = query.denomId;
     }
@@ -334,7 +348,7 @@ TxSchema.statics.queryTxWithNft = async function(query: ITxsWithNftQuery): Promi
         queryParameters['msgs.msg.id'] = query.tokenId;
     }
     result.data = await this.find(queryParameters, dbRes.txList)
-        .sort({ time: -1 })
+        .sort({ height: -1 })
         .skip((Number(query.pageNum) - 1) * Number(query.pageSize))
         .limit(Number(query.pageSize));
     if (query.useCount && query.useCount == true) {
@@ -350,14 +364,13 @@ TxSchema.statics.queryTxWithServiceName = async function(query: ITxsWithServiceN
     if (query.serviceName && query.serviceName.length) {
         queryParameters = {
             $or: [
-                { 'msgs.msg.service_name': query.serviceName },
                 { 'msgs.msg.ex.service_name': query.serviceName },
-                { 'msgs.type': filterExTxTypeRegExp() }
+                { 'msgs.type': { $in: Cache.supportTypes || [] } }
             ],
         };
     }
     result.data = await this.find(queryParameters)
-        .sort({ time: -1 })
+        .sort({ height: -1 })
         .skip((Number(query.pageNum) - 1) * Number(query.pageSize))
         .limit(Number(query.pageSize));
     if (query.useCount && query.useCount == true) {
@@ -380,7 +393,7 @@ TxSchema.statics.queryCallServiceWithConsumerAddr = async function(consumerAddr:
         status: TxStatus.SUCCESS,
     };
     result.data = await this.find(queryParameters, dbRes.service)
-        .sort({ time: -1 })
+        .sort({ height: -1 })
         .skip((Number(pageNum) - 1) * Number(pageSize))
         .limit(Number(pageSize));
     if (useCount && useCount == true) {
@@ -405,7 +418,7 @@ TxSchema.statics.queryBindServiceWithProviderAddr = async function(ProviderAddr:
         status: TxStatus.SUCCESS,
     };
     result.data = await this.find(queryParameters, dbRes.service)
-        .sort({ time: -1 })
+        .sort({ height: -1 })
         .skip((Number(pageNum) - 1) * Number(pageSize))
         .limit(Number(pageSize));
     if (useCount && useCount == true) {
@@ -426,11 +439,11 @@ TxSchema.statics.queryRespondCountWithServceName = async function(servceName: st
 // ==> txs/services/respond-service
 TxSchema.statics.querydisableServiceBindingWithServceName = async function(servceName: string, providerAddr: string): Promise<ITxStruct[]> {
     return await this.find({
-        'msgs.msg.service_name': servceName,
+        'msgs.msg.ex.service_name': servceName,
         'msgs.msg.provider': providerAddr,
         'msgs.type': TxType.disable_service_binding,
     },{time:1})
-        .sort({ time: -1 })
+        .sort({ height: -1 })
         .limit(1);
 };
 
@@ -442,7 +455,8 @@ TxSchema.statics.queryTxWithHash = async function(hash: string): Promise<ITxStru
 
 //  /statistics
 TxSchema.statics.queryTxStatistics = async function(): Promise<{ txCount: number, serviceCount: number }> {
-    let txCount = await this.find({ 'msgs.type' : filterExTxTypeRegExp() }).countDocuments();
+    // let txCount = await this.find({ 'msgs.type' : filterExTxTypeRegExp() }).countDocuments();
+    let txCount = await this.find({ 'msgs.type': { $in: Cache.supportTypes || [] } }).countDocuments();
     let serviceCount = await this.find({ 'msgs.type': TxType.define_service, status: TxStatus.SUCCESS }).countDocuments();
     return {
         txCount,
@@ -500,24 +514,40 @@ TxSchema.statics.findCallServiceTxWithReqContextIds = async function(reqContextI
 //定时任务, 查询所有关于service的tx
 TxSchema.statics.findAllServiceTx = async function(pageSize?: number): Promise<ITxStruct[]> {
     pageSize = pageSize || cfg.taskCfg.syncTxServiceNameSize;
+    const serviceTypesList: TxType[] = [
+        TxType.define_service,
+        TxType.bind_service,
+        TxType.call_service,
+        TxType.respond_service,
+        TxType.update_service_binding,
+        TxType.disable_service_binding,
+        TxType.enable_service_binding,
+        TxType.refund_service_deposit,
+        TxType.pause_request_context,
+        TxType.start_request_context,
+        TxType.kill_request_context,
+        TxType.update_request_context,
+    ];
+
     let queryParameters: any = {
-        $or: [
-            { 'type': TxType.define_service },
-            { 'type': TxType.bind_service },
-            { 'type': TxType.call_service },
-            { 'type': TxType.respond_service },
-            { 'type': TxType.update_service_binding },
-            { 'type': TxType.disable_service_binding },
-            { 'type': TxType.enable_service_binding },
-            { 'type': TxType.refund_service_deposit },
-            { 'type': TxType.pause_request_context },
-            { 'type': TxType.start_request_context },
-            { 'type': TxType.kill_request_context },
-            { 'type': TxType.update_request_context },
-        ],
+        // $or: [
+        //     { 'type': TxType.define_service },
+        //     { 'type': TxType.bind_service },
+        //     { 'type': TxType.call_service },
+        //     { 'type': TxType.respond_service },
+        //     { 'type': TxType.update_service_binding },
+        //     { 'type': TxType.disable_service_binding },
+        //     { 'type': TxType.enable_service_binding },
+        //     { 'type': TxType.refund_service_deposit },
+        //     { 'type': TxType.pause_request_context },
+        //     { 'type': TxType.start_request_context },
+        //     { 'type': TxType.kill_request_context },
+        //     { 'type': TxType.update_request_context },
+        // ],
+        'type': { $in: serviceTypesList },
         'msgs.msg.ex.service_name': null,
     };
-    return await this.find(queryParameters, dbRes.syncServiceTask).sort({ time: -1 }).limit(Number(pageSize));
+    return await this.find(queryParameters, dbRes.syncServiceTask).sort({ height: -1 }).limit(Number(pageSize));
 };
 
 //用request_context_id查询call_service的service_name
@@ -591,7 +621,7 @@ TxSchema.statics.findServiceAllList = async function(
         'msgs.msg.name':1})
         .sort({
             'msgs.msg.ex.bind': -1,
-            time: -1,
+            height: -1,
         })
         .skip((Number(pageNum) - 1) * Number(pageSize))
         .limit(Number(pageSize));
@@ -606,15 +636,15 @@ TxSchema.statics.findBindServiceTxList = async function(
     const queryParameters: any = {
         'msgs.type': TxType.bind_service,
         status: TxStatus.SUCCESS,
-        'msgs.msg.service_name': serviceName,
+        'msgs.msg.ex.service_name': serviceName,
     };
     if (pageNum && pageSize) {
         return await this.find(queryParameters,{'msgs.msg.provider':1,time:1})
-            .sort({ 'time': -1 })
+            .sort({ 'height': -1 })
             .skip((Number(pageNum) - 1) * Number(pageSize))
             .limit(Number(pageSize));
     } else {
-        return await this.find(queryParameters).sort({ 'time': -1 });
+        return await this.find(queryParameters).sort({ 'height': -1 });
     }
 
 };
@@ -648,7 +678,7 @@ TxSchema.statics.findServiceProviderCount = async function(serviceName): Promise
     const queryParameters: any = {
         'msgs.type': TxType.bind_service,
         status: TxStatus.SUCCESS,
-        'msgs.msg.service_name': serviceName,
+        'msgs.msg.ex.service_name': serviceName,
     };
     return await this.countDocuments(queryParameters);
 };
@@ -706,7 +736,7 @@ TxSchema.statics.findServiceTxCount = async function(serviceName: string, type: 
 
 TxSchema.statics.findBindTx = async function(serviceName: string, provider: string): Promise<ITxStruct | null> {
     const queryParameters: any = {
-        'msgs.msg.service_name': serviceName,
+        'msgs.msg.ex.service_name': serviceName,
         'msgs.msg.provider': provider,
         'msgs.type': TxType.bind_service,
         status: TxStatus.SUCCESS,
@@ -770,7 +800,7 @@ TxSchema.statics.queryDenomTx = async function(
     return await this.find(params)
         .skip((Number(pageNum) - 1) * Number(pageSize))
         .limit(Number(pageSize))
-        .sort({time: -1});
+        .sort({height: -1});
 };
 
 TxSchema.statics.queryDenomTxCount = async function (denomNameOrId?: string,):Promise<ITxStruct[]>{
@@ -803,24 +833,33 @@ TxSchema.statics.queryTxByDenomIdAndNftId = async function (
     nftId: string,
     denomId: string
 ): Promise<ITxStruct | null> {
+    const typesList: TxType[] = [
+        TxType.transfer_nft,
+        TxType.edit_nft,
+        TxType.mint_nft
+    ];
+
     const params = {
         status: TxStatus.SUCCESS,
         'msgs.msg.id': nftId,
         'msgs.msg.denom': denomId,
-        $or:[
-            {
-                'msgs.type': TxType.transfer_nft,
-            },
-            {
-                'msgs.type': TxType.edit_nft,
-            },
-            {
-                'msgs.type': TxType.mint_nft,
-            }
-        ]
+        // $or:[
+        //     {
+        //         'msgs.type': TxType.transfer_nft,
+        //     },
+        //     {
+        //         'msgs.type': TxType.edit_nft,
+        //     },
+        //     {
+        //         'msgs.type': TxType.mint_nft,
+        //     }
+        // ],
+        'msgs.type': {
+            $in: typesList
+        }
     };
     return await this.find(params, { time: 1 })
-        .sort({ time: -1 })
+        .sort({ height: -1 })
         .limit(1);
 };
 
@@ -828,21 +867,29 @@ TxSchema.statics.queryTxByDenomIdAndNftId = async function (
 TxSchema.statics.queryListByCreateAndUpDateIdentity = async function(
   height: number,
   limitSize:number,
-):Promise<ITxStruct | null >{
+): Promise<ITxStruct | null>{
+    const typesList: TxType[] = [
+        TxType.create_identity,
+        TxType.update_identity
+    ];
     const params =  {
         height:{
             $gte:height
         },
-        $or:[
-            {
-                'msgs.type': TxType.create_identity,
-                status: TxStatus.SUCCESS,
-            },
-            {
-                'msgs.type': TxType.update_identity,
-                status: TxStatus.SUCCESS,
-            }
-        ]
+        // $or:[
+        //     {
+        //         'msgs.type': TxType.create_identity,
+        //         status: TxStatus.SUCCESS,
+        //     },
+        //     {
+        //         'msgs.type': TxType.update_identity,
+        //         status: TxStatus.SUCCESS,
+        //     }
+        // ],
+        status: TxStatus.SUCCESS,
+        'msgs.type': {
+            $in: typesList
+        }
     }
     return await this.find(params, dbRes.syncIdentityTask ).limit(limitSize).sort({'height':-1})
 }
@@ -850,19 +897,26 @@ TxSchema.statics.queryListByCreateAndUpDateIdentity = async function(
 // /txs/identity
 TxSchema.statics.queryTxListByIdentity = async function (query:IIdentityTx){
     let result: IListStruct = {};
+    const typesList: TxType[] = [
+        TxType.create_identity,
+        TxType.update_identity
+    ];
     const params =  {
         'msgs.msg.id':query.id,
-        $or:[
-            {
-                'msgs.type': TxType.create_identity,
-            },
-            {
-                'msgs.type': TxType.update_identity,
-            }
-        ]
+        // $or:[
+        //     {
+        //         'msgs.type': TxType.create_identity,
+        //     },
+        //     {
+        //         'msgs.type': TxType.update_identity,
+        //     }
+        // ],
+        'msgs.type': {
+            $in: typesList
+        }
     }
     result.data = await this.find(params, dbRes.txList)
-      .sort({ time: -1 })
+      .sort({ height: -1 })
       .skip((Number(query.pageNum) - 1) * Number(query.pageSize))
       .limit(Number(query.pageSize));
     if (query.useCount && query.useCount == true) {
@@ -886,15 +940,15 @@ TxSchema.statics.queryDepositsByAddress = async function (address: string) {
 // sync tokens task
 TxSchema.statics.queryTxBySymbol = async function(
     symbol: string,
-    time: number
-  ):Promise<ITxStruct | null >{
+    height: number
+): Promise<ITxStruct | null>{
       const params =  {
         'msgs.type': TxType.mint_token,
         status: TxStatus.SUCCESS,
         'msgs.msg.symbol': symbol,
-        time: { $gt:time }
+        height: { $gt: height }
       }
-    return await this.find(params, {time:1,msgs:1}).sort({'time': 1}).limit(1000)
+    return await this.find(params, {height:1,msgs:1}).sort({'height': 1}).limit(1000)
 }
 
 // 	txs/asset
@@ -907,7 +961,7 @@ TxSchema.statics.queryTxWithAsset = async function(query: ITxsWithAssetQuery): P
         queryParameters['msgs.msg.symbol'] = query.symbol;
     }
     result.data = await this.find(queryParameters, dbRes.assetList)
-        .sort({ time: -1 })
+        .sort({ height: -1 })
         .skip((Number(query.pageNum) - 1) * Number(query.pageSize))
         .limit(Number(query.pageSize));
     if (query.useCount && query.useCount == true) {
@@ -955,13 +1009,21 @@ TxSchema.statics.queryNftTxList = async function (lastBlockHeight: number): Prom
 };
 
 TxSchema.statics.queryMaxNftTxList = async function (): Promise<ITxStruct[]>  {
+    const typesList: TxType[] = [
+        TxType.mint_nft,
+        TxType.edit_nft,
+        TxType.transfer_nft,
+        TxType.burn_nft
+    ];
     return await this.find({
-        $or:[
-            {'msgs.type':TxType.mint_nft},
-            {'msgs.type':TxType.edit_nft},
-            {'msgs.type':TxType.transfer_nft},
-            {'msgs.type':TxType.burn_nft},
-        ],
+        // $or:[
+        //     {'msgs.type':TxType.mint_nft},
+        //     {'msgs.type':TxType.edit_nft},
+        //     {'msgs.type':TxType.transfer_nft},
+        //     {'msgs.type':TxType.burn_nft},
+        // ],
+        'msgs.type': {
+            $in: typesList
+        }
     },{height: 1}).sort({height: -1}).limit(1);
 };
-

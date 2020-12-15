@@ -125,9 +125,6 @@ export const dbRes = {
         'msgs.msg.request_context_id':1,
         'msgs.msg.service_name':1,
         'msgs.msg.name':1,
-        'msgs.msg.providers':1,
-        'msgs.msg.provider':1,
-        'msgs.msg.owner':1,
         'msgs.msg.pricing':1,
         'msgs.msg.qos':1,
         'msgs.msg.deposit':1,
@@ -157,7 +154,6 @@ export const dbRes = {
     },
     syncIdentityTask:{
         ...common,
-        'msgs.type':1,
         'msgs.msg.pubkey':1,
         'msgs.msg.certificate':1,
         'msgs.msg.ex':1,

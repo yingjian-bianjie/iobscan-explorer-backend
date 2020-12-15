@@ -3,8 +3,6 @@ import { Logger } from '../logger';
 import {
     IDeleteQuery,
     INftCountQueryParams,
-    INftDetailStruct,
-    INftListStruct,
     INftStruct,
 } from '../types/schemaTypes/nft.interface';
 import { IListStruct } from '../types';
@@ -24,8 +22,11 @@ export const NftSchema = new mongoose.Schema({
     update_time: Number,
     hash: String,
     time: Number
-},{versionKey: false});
+}, { versionKey: false });
 NftSchema.index({ denom_id: 1, nft_id: 1 }, { unique: true });
+// 新增
+NftSchema.index({ last_block_height: 1, denom_id: 1, nft_id: 1 }, { background:true});
+NftSchema.index({ owner: 1, last_block_height: 1 }, { background:true });
 
 NftSchema.statics = {
     async findList(
@@ -65,7 +66,7 @@ NftSchema.statics = {
             // condition.push({'$match': queryParameters});
         }
         result.data = await this.find(queryParameters)
-            .sort({last_block_time:-1})
+            .sort({last_block_height:-1})
             .skip((Number(pageNum) - 1) * Number(pageSize))
             .limit(Number(pageSize));
 
@@ -79,33 +80,8 @@ NftSchema.statics = {
         return result; 
     },
 
-    async findOneByDenomAndNftId(denomId: string, nftId: string): Promise<INftDetailStruct | null> {
-        const res: INftDetailStruct[] = await this.aggregate([
-            {
-                $lookup: {
-                    from: 'ex_sync_denom',
-                    localField: 'denom_id',
-                    foreignField: 'denom_id',
-                    as: 'denomDetail',
-                },
-            }, {
-                $match: {
-                    denom_id:denomId,
-                    nft_id: nftId,
-                },
-            }, {
-                $project: {
-                    'denomDetail._id': 0,
-                    'denomDetail.update_time': 0,
-                    'denomDetail.create_time': 0,
-                },
-            },
-        ]);
-        if (res.length > 0) {
-            return res[0];
-        } else {
-            return null;
-        }
+    async findOneByDenomAndNftId(denomId: string, nftId: string): Promise<INftStruct | null> {
+        return await this.findOne({denom_id:denomId,nft_id:nftId})
     },
 
     async findCount(denomId: string, 

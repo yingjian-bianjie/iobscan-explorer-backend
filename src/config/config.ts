@@ -23,6 +23,8 @@ const {
     TOKENS,
     INCREASE_HEIGHT,
     MAX_OPERATE_TX_COUNT,
+    CURRENT_CHAIN,
+    MAIN_TOKEN,
     DELETE_CRON_JOBS
 } = process.env;
 export const cfg = {
@@ -58,5 +60,7 @@ export const cfg = {
         maxOperateTxCount: MAX_OPERATE_TX_COUNT || 100,
         DELETE_CRON_JOBS: DELETE_CRON_JOBS ? JSON.parse(DELETE_CRON_JOBS) : []
     },
+    currentChain: CURRENT_CHAIN || 'IRIS',
+    MAIN_TOKEN: MAIN_TOKEN ? JSON.parse(MAIN_TOKEN) : {"min_unit":"umuon","scale":"6","symbol":"muon"}
 };
 

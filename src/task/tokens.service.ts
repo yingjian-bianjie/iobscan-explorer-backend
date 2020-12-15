@@ -1,10 +1,13 @@
+import { map } from 'rxjs/operators';
 import { Injectable } from '@nestjs/common';
 import {InjectModel} from '@nestjs/mongoose';
 import {TokensHttp} from "../http/lcd/tokens.http";
 import {ITokens} from "../types/schemaTypes/tokens.interface";
 import {Model} from "mongoose"
 import { moduleStaking } from "../constant";
-import { TxType } from '../constant';
+import { TxType,currentChain } from '../constant';
+import { cfg } from '../config/config'
+import {TokensLcdDto} from "../dto/http.dto";
 @Injectable()
 export class TokensTaskService {
     constructor(
@@ -17,15 +20,34 @@ export class TokensTaskService {
         this.doTask = this.doTask.bind(this);
     }
     async doTask(): Promise<void> {
-        const TokensData = await this.TokensHttp.getTokens()
+        let TokensData;
+        switch (cfg.currentChain) {
+            case currentChain.iris:
+                // iris
+                TokensData = await this.TokensHttp.getTokens()
+                break;
+            case currentChain.cosmos:
+                // cosmos
+                TokensData = TokensLcdDto.bundleData([cfg.MAIN_TOKEN])
+                break;
+            default:
+                break;
+        }
+        const TokensFromDB = await (this.tokensModel as any).queryAllTokens()
         const stakingToken = await (this.parametersTaskModel as any).queryStakingToken(moduleStaking)
-        let TokensDbMap =new Map()
+        let TokensDbMap = new Map()
         if (TokensData && TokensData.length > 0) {
             for (let token of TokensData) {
-                let data = await this.txModel.queryTxBySymbol(token.symbol, token.mint_token_time)
+                TokensFromDB.map(item => {
+                    if (item.symbol === token.symbol) {
+                        token.total_supply = item.total_supply;
+                        token.mint_token_height = item.mint_token_height
+                    }
+                })
+                let data = await this.txModel.queryTxBySymbol(token.symbol, token.mint_token_height)
                 if (data && data.length) {
                     data.forEach(item => {
-                        token.mint_token_time = item.time
+                        token.mint_token_height = item.height
                         item.msgs.forEach(element => {
                             if (element.type === TxType.mint_token) {
                                 //TODO:duanjie 使用大数计算
@@ -40,7 +62,6 @@ export class TokensTaskService {
         if(stakingToken && stakingToken.cur_value) {
             TokensDbMap.get(stakingToken.cur_value).is_main_token = true
         }
-        
        this.insertTokens(TokensDbMap)
     }
     private insertTokens(TokensDataMap) {

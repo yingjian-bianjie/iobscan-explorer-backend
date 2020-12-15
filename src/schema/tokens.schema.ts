@@ -12,16 +12,17 @@ export const TokensSchema = new mongoose.Schema({
     owner: String,
     name: String,
     total_supply: String,
-    mint_token_time: Number
+    mint_token_height: Number
 })
 TokensSchema.index({symbol: 1}, {unique: true})
+TokensSchema.index({min_unit: 1})
 
 TokensSchema.statics = {
     async insertTokens(Tokens: ITokens) {
         //设置 options 查询不到就插入操作
         let {min_unit} = Tokens
         const options = {upsert: true, new: false, setDefaultsOnInsert: true}
-        await this.findOneAndUpdate({min_unit}, Tokens, options)
+        await this.findOneAndUpdate({ min_unit }, Tokens, options)
     },
     async queryAllTokens() {
         return await this.find({})
@@ -39,7 +40,6 @@ TokensSchema.statics = {
                 max_supply: 1,
                 mintable: 1,
             })
-            .sort({ height: 1 })
             .skip((pageNum - 1) * pageSize)
             .limit(pageSize).exec();
     },

@@ -1,9 +1,7 @@
 import os from 'os'
-import {DuplicateKey} from "../constant";
 
 let Bech32 = require('bech32')
 let Sha256 = require("sha256")
-
 export function getIpAddress() {
     const interfaces = os.networkInterfaces();
     for (const devName in interfaces) {
@@ -25,9 +23,9 @@ export function formatDateStringToNumber(dateString) {
     return Math.floor(new Date(dateString).getTime() / 1000)
 }
 
-export function addressTransform(str: string, prefix?: string) {
+export function addressTransform(str:string, prefix?:string) {
     try {
-        let Bech32str = Bech32.decode(str, 'utf-8');
+        let Bech32str = Bech32.decode(str,'utf-8');
         prefix = prefix || '';
         let result = Bech32.encode(prefix, Bech32str.words)
         return result;
@@ -36,12 +34,12 @@ export function addressTransform(str: string, prefix?: string) {
     }
 }
 
-export function hexToBech32(hexStr: string, prefix: string = "") {
+export function hexToBech32(hexStr:string, prefix:string = "") {
     try {
-        let words = Bech32.toWords(Buffer.from(hexStr, 'hex'));
+        let words = Bech32.toWords(Buffer.from(hexStr,'hex'));
         return Bech32.encode(prefix, words);
-    } catch (e) {
-        console.warn('address transform fialed', e)
+    }catch (e) {
+        console.warn('address transform fialed',e)
     }
 }
 
@@ -57,25 +55,16 @@ export function pageNation(dataArray: any[], pageSize: number = 0) {
     }
     return newArray
 }
-
 export function getAddress(publicKey) {
     let words = Bech32.decode(publicKey).words;
-    words = Bech32.fromWords(words);
-    if (words.length > 33) {
+    words =  Bech32.fromWords(words);
+    if (words.length > 33){
         //去掉amino编码前缀
         words = words.slice(5)
     }
     let addr = Sha256(Buffer.from(words));
     if (addr && addr.length > 40) {
-        addr = addr.substr(0, 40);
+        addr = addr.substr(0,40);
     }
     return addr;
-}
-
-export function flDuplicateKeyInErrorLog(errorInfo) {
-    if (errorInfo && JSON.stringify(errorInfo).includes(DuplicateKey)) {
-        return true
-    } else {
-        return false
-    }
 }

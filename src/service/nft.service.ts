@@ -2,11 +2,14 @@ import { Injectable } from '@nestjs/common';
 import { Model } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
 import { ListStruct } from '../api/ApiResult';
-import { INft, INftDetailStruct, INftListStruct, INftStruct, INftMapStruct } from '../types/schemaTypes/nft.interface';
+import { INft,INftStruct, INftMapStruct } from '../types/schemaTypes/nft.interface';
 import { NftDetailReqDto, NftDetailResDto, NftListReqDto, NftListResDto } from '../dto/nft.dto';
+import { IDenom, IDenomStruct } from '../types/schemaTypes/denom.interface';
 @Injectable()
 export class NftService {
-    constructor(@InjectModel('Nft') private nftModel: Model<INft>) {
+    constructor(
+        @InjectModel('Nft') private nftModel: Model<INft>,
+        @InjectModel('Denom') private denomModel: Model<IDenom>) {
     }
 
     async queryList(query: NftListReqDto): Promise<ListStruct<NftListResDto[]>> {
@@ -31,11 +34,12 @@ export class NftService {
         return new ListStruct(res, pageNum, pageSize, nftData.count);
     }
 
+    // nfts/details
     async queryDetail(query: NftDetailReqDto): Promise<NftDetailResDto | null> {
         const { denomId, nftId } = query;
-        const nft: INftDetailStruct = await (this.nftModel as any).findOneByDenomAndNftId(denomId, nftId);
-        if (nft) {
-            let denomDetail = (nft.denomDetail as any).length > 0 ? nft.denomDetail[0] : null;
+        const nft: INftStruct = await (this.nftModel as any).findOneByDenomAndNftId(denomId, nftId);
+        const denomDetail:IDenomStruct = await (this.denomModel as any).findOneByDenomAndNftIdFromDenom(denomId);
+        if (nft && denomDetail) {
             return new NftDetailResDto(
                 nft.denom_id,
                 nft.nft_id, 

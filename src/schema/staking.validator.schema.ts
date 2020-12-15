@@ -36,6 +36,8 @@ export const StakingValidatorSchema = new mongoose.Schema({
     update_time: Number,
 })
 StakingValidatorSchema.index({operator_address: 1}, {unique: true})
+StakingValidatorSchema.index({proposer_addr: 1})	
+StakingValidatorSchema.index({jailed: 1, status: 1})
 
 StakingValidatorSchema.statics = {
 
@@ -83,6 +85,7 @@ StakingValidatorSchema.statics = {
         if (query.useCount && query.useCount == true) {
             result.count = await this.find(queryParameters).countDocuments();
         }
+        // console.log('查询条件',queryParameters)
         result.data = await this.find(queryParameters)
             .skip((Number(query.pageNum) - 1) * Number(query.pageSize))
             .limit(Number(query.pageSize));

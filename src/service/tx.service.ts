@@ -80,7 +80,7 @@ export class TxService {
 
     async cacheTxTypes(){
             const txTypes = await this.txTypeModel.queryTxTypeList();
-            Cache.supportTypes = txTypes.map((item)=>item.type_name);
+            Cache.supportTypes = txTypes.map((item) => item.type_name);
     }
 
     // txs
@@ -282,7 +282,6 @@ export class TxService {
                 bind: ex.bind || 0,
             };
         });
-
         for (const name of serviceNameList) {
             if (name.bind && name.bind > 0) {
                 const bindServiceTxList: ITxStruct[] = await (this.txModel as any).findBindServiceTxList(name.serviceName);

@@ -1,4 +1,4 @@
-import {cfg} from '../config/config';
+import { cfg } from '../config/config';
 
 export enum TaskEnum {
     denom = 'ex_sync_denom',
@@ -44,7 +44,7 @@ export enum TxType {
     edit_nft = 'edit_nft',
     issue_denom = 'issue_denom',
     mint_nft = 'mint_nft',
-    // Asset
+    // Asset 
     issue_token = 'issue_token',
     edit_token = 'edit_token',
     mint_token = 'mint_token',
@@ -131,11 +131,12 @@ export const PubKeyAlgorithm = {
     4: 'ED25519',
     5: 'SM2',
 }
-export const addressPrefix = {
-    iaa: 'iaa',
-    iva: 'iva',
-    ica: 'ica'
+
+export enum currentChain  {
+    cosmos ='COSMOS',
+    iris ='IRIS'
 }
+
 export const signedBlocksWindow = 'signed_blocks_window'
 export const hubDefaultEmptyValue = '[do-not-modify]'
 export const moduleSlashing = 'slashing'
@@ -149,10 +150,37 @@ export const ValidatorStatus = {
     'bonded': 3,
 }
 
-export const ValidatorStatus_str = {
-    'unbonded': 'unbonded',
-    'unbonding': 'unbonding',
-    'bonded': 'bonded',
+let addressPrefix,validatorStatusStr;
+switch (cfg.currentChain) {
+    case currentChain.iris:
+        validatorStatusStr = {
+            'unbonded': 'unbonded',
+            'unbonding': 'unbonding',
+            'bonded': 'bonded'
+        };
+        addressPrefix = {
+            iaa: 'iaa',
+            iva: 'iva',
+            ica: 'ica'
+        }
+        break;
+    case currentChain.cosmos:
+        validatorStatusStr = {
+            'unbonded': 'BOND_STATUS_UNBONDED',
+            'unbonding': 'BOND_STATUS_UNBONDING',
+            'bonded': 'BOND_STATUS_BONDED'
+        };
+        addressPrefix = {
+            iaa: 'cosmos',
+            iva: 'cosmosvaloper',
+            ica: 'cosmosvalcons'
+        }
+        break;
+    default:
+        break;
+}
+export {
+    validatorStatusStr,addressPrefix
 }
 
 export const ValidatorNumberStatus = {
@@ -168,7 +196,3 @@ export const INCREASE_HEIGHT = Number(cfg.taskCfg.increaseHeight);
 export const MAX_OPERATE_TX_COUNT = Number(cfg.taskCfg.maxOperateTxCount);
 
 export const NFT_INFO_DO_NOT_MODIFY = '[do-not-modify]';
-
-export const TASK_DISPATCH_FAULT_TOLERANCE = 60 * 1000;
-
-export const DuplicateKey = 'E11000 duplicate key error collection'

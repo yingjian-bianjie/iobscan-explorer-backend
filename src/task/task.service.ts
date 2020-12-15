@@ -4,7 +4,7 @@ import { TxTaskService } from './tx.task.service';
 import { DenomTaskService } from './denom.task.service';
 import { NftTaskService } from './nft.task.service';
 import { TaskDispatchService } from '../service/task.dispatch.service';
-import { TASK_DISPATCH_FAULT_TOLERANCE, TaskEnum } from '../constant';
+import { TaskEnum } from '../constant';
 import { getIpAddress } from '../util/util';
 import { cfg } from '../config/config';
 import { TaskCallback } from '../types/task.interface';
@@ -123,7 +123,7 @@ export class TasksService {
             //一个定时任务的完整周期必须严格按照:
             //上锁 ---> 更新心率时间 ---> 启动定时更新心率时间任务 ---> 执行定时任务 ---> 释放锁 ---> 清除心率定时任务
             //否则如果在执行定时任务未结束之前将锁打开, 那么有可能后面的实例会重新执行同样的任务
-            //为了清洗的看出完整的周期执行顺序, 为每一次的定时任务新增一个唯一key(大致唯一, 只要跟最近的定时任务不重复即可),并标注执行步骤
+            //为了清晰的看出完整的周期执行顺序, 为每一次的定时任务新增一个唯一key(大致唯一, 只要跟最近的定时任务不重复即可),并标注执行步骤
             let randomKey: IRandomKey = {
                 key: String(Math.random()),
                 step:0,

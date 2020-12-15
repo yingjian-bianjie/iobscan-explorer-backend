@@ -26,14 +26,6 @@ export interface INftCountQueryParams {
     owner?: string;
 }
 
-export interface INftDetailStruct extends INftStruct{
-    denomDetail: IDenomStruct,
-}
-
-export interface INftListStruct extends INftStruct{
-    denomDetail: IDenomStruct,
-}
-
 export interface INftMapStruct extends INftStruct{
     denom?: string,
     denom_name?: string,
