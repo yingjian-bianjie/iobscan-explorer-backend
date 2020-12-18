@@ -196,3 +196,16 @@ export const INCREASE_HEIGHT = Number(cfg.taskCfg.increaseHeight);
 export const MAX_OPERATE_TX_COUNT = Number(cfg.taskCfg.maxOperateTxCount);
 
 export const NFT_INFO_DO_NOT_MODIFY = '[do-not-modify]';
+
+export const correlationStr = {
+    '200': 'block',
+    '201': 'txCount',
+    '202': 'validatorCount',
+    '203': 'avgBlockTime',
+    '204': 'assetCount',
+    '205': 'denomCount',
+    '206': 'serviceCount',
+    '207': 'identityCount',
+    '208': 'validatorNumCount',
+    '209': 'bondedTokensInformation'
+}

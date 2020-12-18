@@ -17,14 +17,14 @@ describe('statistics module', () => {
 
     describe('queryStatistics', () => {
         it('should return statistics detail', async () => {
-            const data: any = await statisticsService.queryStatistics();
+            const data: any = await statisticsService.queryStatistics('');
             expect(data).toBeDefined();
         });
     });
 
     describe('queryLatestHeight', () => {
         it('should return latest block height', async () => {
-            const data: {height:number,latestBlockTime:number} | null = await statisticsService.queryLatestHeightAndTime();
+            const data: {height:number,latestBlockTime:number} | null = await statisticsService.queryLatestHeightAndTimeAndValidator();
             expect(data).toBeDefined();
         });
     });
@@ -58,5 +58,11 @@ describe('statistics module', () => {
         });
     });
 
+    describe('queryNetworkStatistics', () => {
+        it('should return NetworkStatistics', async () => {
+            const data: any = await statisticsService.queryNetworkStatistics('200');
+            expect(data).toBeDefined();
+        });
+    });
 });
 

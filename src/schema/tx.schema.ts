@@ -217,7 +217,6 @@ TxSchema.statics.queryTxListByHeightEdge = async function(height:number, pageNum
     let result: IListStruct = {};
     let queryParameters: any = {height:height};
     result.data = await this.find(queryParameters)
-        .sort({ height: 1 })
         .skip((Number(pageNum) - 1) * Number(pageSize))
         .limit(Number(pageSize));
 
@@ -454,14 +453,12 @@ TxSchema.statics.queryTxWithHash = async function(hash: string): Promise<ITxStru
 };
 
 //  /statistics
-TxSchema.statics.queryTxStatistics = async function(): Promise<{ txCount: number, serviceCount: number }> {
-    // let txCount = await this.find({ 'msgs.type' : filterExTxTypeRegExp() }).countDocuments();
-    let txCount = await this.find({ 'msgs.type': { $in: Cache.supportTypes || [] } }).countDocuments();
-    let serviceCount = await this.find({ 'msgs.type': TxType.define_service, status: TxStatus.SUCCESS }).countDocuments();
-    return {
-        txCount,
-        serviceCount,
-    };
+TxSchema.statics.queryTxCountStatistics = async function(): Promise<number> {
+    return await this.find({ 'msgs.type': { $in: Cache.supportTypes || [] } }).countDocuments();
+};
+
+TxSchema.statics.queryServiceCountStatistics = async function(): Promise<number> {
+    return await this.find({ 'msgs.type': TxType.define_service, status: TxStatus.SUCCESS }).countDocuments();
 };
 
 //	获取指定条数的serviceName==null&&type == respond_service 的 tx

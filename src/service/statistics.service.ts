@@ -1,13 +1,15 @@
-import { Injectable } from '@nestjs/common';
+import { IconUriLcdDto } from './../dto/http.dto';
+import { Injectable, Query } from '@nestjs/common';
 import { Model } from 'mongoose';
 import { InjectModel } from '@nestjs/mongoose';
-import { StatisticsResDto } from '../dto/statistics.dto';
+import { StatisticsResDto,NetworkStatisticsResDto } from '../dto/statistics.dto';
 import { IBlock, IBlockStruct } from '../types/schemaTypes/block.interface';
 import { INft } from '../types/schemaTypes/nft.interface';
 import { BlockHttp } from '../http/lcd/block.http';
 import { StakingHttp } from '../http/lcd/staking.http';
 import { BankHttp } from '../http/lcd/bank.http';
-
+import { StatisticsStruct } from '../types/statistics.interface'
+import { correlationStr } from '../constant'
 @Injectable()
 export class StatisticsService {
 
@@ -23,34 +25,95 @@ export class StatisticsService {
     ) {
     }
 
-    async queryStatistics(): Promise<StatisticsResDto> {
-        const latestBlock = await BlockHttp.queryLatestBlockFromLcd();
-        const block = await this.queryLatestHeightAndTime(latestBlock);
-        const avgBlockTime = await this.queryAvgBlockTime();
-        const assetCount = await this.queryAssetCount();
-        const validatorCount = await this.queryConsensusValidatorCount();
-        const {txCount, serviceCount} = await this.queryTxCount();
-        const identityCount = await this.queryIdentityCount({});
-        const denomCount = await this.queryDenomCount();
-        const validatorNumCount = await this.queryValidatorNumCount();
-        let proposer_address = latestBlock && latestBlock.block && latestBlock.block.header && latestBlock.block.header.proposer_address
-        const validatorInformation = await this.queryValidatorInformation(proposer_address);
-        const bondedTokensInformation = await this.queryBondedTokensInformation()
-        return new StatisticsResDto(block.height, block.latestBlockTime, txCount, avgBlockTime, serviceCount, validatorCount, assetCount, identityCount, denomCount,validatorNumCount,validatorInformation.moniker,validatorInformation.validator_icon,validatorInformation.operator_addr,bondedTokensInformation.bonded_tokens,bondedTokensInformation.total_supply);
+    async queryStatistics(query: string): Promise<StatisticsResDto> {
+        const params: Array<string> = query['params'].split(',');
+        const that = this
+        let indicators = []
+        params.forEach( code => {
+            switch (code) {
+                case '202':
+                    indicators.push(this.queryConsensusValidatorCount.bind(that))
+                break;
+                case '203':
+                    indicators.push(this.queryAvgBlockTime.bind(that))
+                break;
+                case '204':
+                    indicators.push(this.queryAssetCount.bind(that))
+                break;
+                case '205':
+                    indicators.push(this.queryDenomCount.bind(that))
+                break;
+                case '206':
+                    indicators.push(this.queryServiceCount.bind(that))
+                break;
+                case '207':
+                    indicators.push(this.queryIdentityCount.bind(that))
+                break;
+                case '208':
+                    indicators.push(this.queryValidatorNumCount.bind(that))
+                    break;
+                default:
+                    break;
+            }
+        })
+        const dateArray = await Promise.all(indicators.map(p=>p()))
+        let statisticsDate: StatisticsStruct = {}
+        params.forEach((func, index) => {
+            statisticsDate[correlationStr[func]] = dateArray[index]
+        })
+        return new StatisticsResDto(statisticsDate)
     }
 
-    async queryLatestHeightAndTime(latestBlock?:any): Promise<{height:number,latestBlockTime:number} | null> {
-        let result:any = { height:0,latestBlockTime:0 };
+    async queryNetworkStatistics(query: string): Promise<NetworkStatisticsResDto> {
+        const params: Array<string> = query['params'].split(',');
+        const latestBlock = await BlockHttp.queryLatestBlockFromLcd();
+        const that = this
+        let indicators = []
+        if ((!params.includes('200')) && params.includes('201')) {
+            params.unshift('200')
+        }
+        params.forEach( code => {
+            switch (code) {
+                case '200':
+                    indicators.push(this.queryLatestHeightAndTimeAndValidator.bind(that,latestBlock))
+                    break;
+                case '201':
+                    indicators.push(this.queryTxCount.bind(that))
+                break;
+                case '209':
+                    indicators.push(this.queryBondedTokensInformation.bind(that))
+                    break;
+                default:
+                    break;
+            }
+        })
+        const dateArray = await Promise.all(indicators.map(p=>p()))
+        let statisticsDate: StatisticsStruct = {}
+        params.forEach((func, index) => {
+            statisticsDate[correlationStr[func]] = dateArray[index]
+        })
+        return new NetworkStatisticsResDto(statisticsDate);
+    }
+
+    async queryLatestHeightAndTimeAndValidator(latestBlock?:any): Promise<{height:number,latestBlockTime:number,moniker:string,validator_icon:string,operator_addr:string} | null> {
+        let result: any = { height: 0, latestBlockTime: 0, moniker: '', validator_icon: '', operator_addr: '' };
+        let proposer_address: string;
         if (latestBlock && latestBlock.block && latestBlock.block.header) {
             result.height = latestBlock.block.header.height;
-            result.latestBlockTime = new Date(latestBlock.block.header.time || '').getTime()/1000;
+            result.latestBlockTime = Math.floor(new Date(latestBlock.block.header.time || '').getTime() / 1000);
+            proposer_address = latestBlock.block.header.proposer_address;
         }else {
             const res: IBlockStruct | null = await (this.blockModel as any).findOneByHeightDesc();
             if (res) {
                 result.height = res.height;
                 result.latestBlockTime = Number(res.time);
+                proposer_address = res.proposer;
             }
         }
+        let validator = await this.stakingValidatorsModel.findValidatorByPropopserAddr(proposer_address);
+        result.moniker = validator && validator[0] && validator[0].description && validator[0].description.moniker;
+        result.validator_icon = validator && validator[0] && validator[0].icon;
+        result.operator_addr = validator && validator[0] && validator[0].operator_address;
         return result;
     }
 
@@ -87,7 +150,11 @@ export class StatisticsService {
     }
 
     async queryTxCount():Promise<any>{
-        return await (this.txModel as any).queryTxStatistics();
+        return await (this.txModel as any).queryTxCountStatistics();
+    }
+
+    async queryServiceCount():Promise<any>{
+        return await (this.txModel as any).queryServiceCountStatistics();
     }
 
     async queryIdentityCount(query:any):Promise<any>{
@@ -101,21 +168,9 @@ export class StatisticsService {
     async queryValidatorNumCount():Promise<any>{
         return await this.stakingValidatorsModel.queryActiveValCount();
     }
-    
-    async queryValidatorInformation(proposer): Promise<any>{
-        let validators = await this.stakingValidatorsModel.queryAllValidators();
-        validators = validators.filter(item => {
-            return item.proposer_addr === proposer
-        })
-        const moniker = (validators && validators[0] && validators[0].description && validators[0].description.moniker) || '';
-        const validator_icon = (validators && validators[0] && validators[0].icon) || '';
-        const operator_addr = (validators && validators[0] && validators[0].operator_address) || '';
-        return { moniker, validator_icon,operator_addr };
-    }
 
     async queryBondedTokensInformation(): Promise<any>{
-        const bondedTokensLcd = await StakingHttp.getBondedTokens()
-        const totalSupplyLcd = await BankHttp.getTotalSupply()
+        const [bondedTokensLcd,totalSupplyLcd] = await Promise.all([StakingHttp.getBondedTokens(),BankHttp.getTotalSupply()])
         const bonded_tokens = bondedTokensLcd && bondedTokensLcd.bonded_tokens || '0'
         const mainToken = await (this.tokensModel as any).queryMainToken()
         let total_supply: string = '0';
