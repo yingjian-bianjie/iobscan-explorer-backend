@@ -132,7 +132,7 @@ export class BlockService {
                 })
             }
         }
-        return new ListStruct(ValidatorsetsResDto.bundleData(data), pageNum, pageSize, data.length);
+        return new ListStruct(ValidatorsetsResDto.bundleData(data), pageNum, pageSize, data_lcd.length);
     }
 
     async queryLatestBlock(): Promise<IBlockStruct> {
