@@ -55,6 +55,7 @@ export function pageNation(dataArray: any[], pageSize: number = 0) {
     }
     return newArray
 }
+
 export function getAddress(publicKey) {
     let words = Bech32.decode(publicKey).words;
     words =  Bech32.fromWords(words);
@@ -67,4 +68,9 @@ export function getAddress(publicKey) {
         addr = addr.substr(0,40);
     }
     return addr;
+}
+
+export function splitString(str,symbol) {
+    let array = str.split(symbol)
+    return array[array.length - 1]
 }

@@ -8,7 +8,9 @@ import {
     ValidatorUnBondingDelegationsQueryReqDto,
     allValidatorReqDto,
     ValidatorDetailAddrReqDto,
-    AccountAddrReqDto } from '../dto/staking.dto';
+    AccountAddrReqDto,
+    ValidatorDelegationsQueryReqDto
+} from '../dto/staking.dto';
 
 describe('stakingValidatorController', () => {
     let stakingService : StakingService
@@ -103,6 +105,36 @@ describe('stakingValidatorController', () => {
                 expect(data).toBeDefined();
             }
 
+        });
+    });
+
+    describe('getValidatorVotesList', () => {
+        it('should return VotesList array', async () => {
+            let param:ValidatorDelegationsReqDto = {
+                address:'iaa1nfgkyn6ux5mvavhyk5aq8zgzushrecut267w7q',
+            }
+            let query:ValidatorDelegationsQueryReqDto = {
+                pageNum:1,
+                pageSize:10,
+                useCount:true
+            };
+            let data:any = await stakingService.getValidatorVotesList(param,query);
+            expect(data).toBeDefined();
+        });
+    });
+
+    describe('getValidatorDepositsList', () => {
+        it('should return DepositsList array', async () => {
+            let param:ValidatorDelegationsReqDto = {
+                address:'iva1nfgkyn6ux5mvavhyk5aq8zgzushrecutlt5pr8',
+            }
+            let query:ValidatorDelegationsQueryReqDto = {
+                pageNum:1,
+                pageSize:10,
+                useCount:true
+            };
+            let data:any = await stakingService.getValidatorDepositsList(param,query);
+            expect(data).toBeDefined();
         });
     });
 })

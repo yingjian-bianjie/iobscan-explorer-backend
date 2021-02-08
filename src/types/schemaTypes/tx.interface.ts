@@ -91,3 +91,27 @@ export interface ITxsWithAssetQuery {
     pageSize?:number
     useCount?:boolean
 }
+
+export interface ITxSubmitProposal  {
+    tx_hash: string
+    proposer: string
+    initial_deposit: object[]
+    content: string|object
+} 
+
+export interface ITxVoteProposal  {
+    _id: string
+    msg: object
+    count: number
+}
+
+export interface ITxVoteProposalAll  {
+    height: number
+    tx_hash: string
+    msgs: object
+}
+
+export interface ITxVoteALL {
+    msgs: object
+    tx_hash: string
+}

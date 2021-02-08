@@ -4,6 +4,7 @@ import {ParametersSchema} from "../schema/parameters.schema";
 import {ParametersTaskService} from "../task/parameters.task.service";
 import {StakingHttp} from "../http/lcd/staking.http";
 import {TokensHttp} from "../http/lcd/tokens.http";
+import {GovHttp} from "../http/lcd/gov.http";
 @Module({
     imports:[
         MongooseModule.forFeature([
@@ -14,7 +15,7 @@ import {TokensHttp} from "../http/lcd/tokens.http";
             }
         ])
     ],
-    providers:[ParametersTaskService,StakingHttp,TokensHttp],
+    providers:[ParametersTaskService,StakingHttp,TokensHttp,GovHttp],
     exports:[ParametersTaskService,StakingHttp],
 })
 export class ParametersTaskModule {

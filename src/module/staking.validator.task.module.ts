@@ -7,7 +7,7 @@ import {ParametersSchema} from "../schema/parameters.schema";
 import {ParametersTaskService} from "../task/parameters.task.service";
 import {TokensHttp} from "../http/lcd/tokens.http";
 import {BlockHttp} from "../http/lcd/block.http";
-
+import {GovHttp} from "../http/lcd/gov.http";
 
 @Module({
   imports:[
@@ -24,7 +24,7 @@ import {BlockHttp} from "../http/lcd/block.http";
       },
     ])
   ],
-  providers:[StakingValidatorTaskService,ParametersTaskService,StakingHttp,TokensHttp,BlockHttp],
+  providers:[StakingValidatorTaskService,ParametersTaskService,StakingHttp,TokensHttp,BlockHttp,GovHttp],
   exports:[StakingValidatorTaskService,ParametersTaskService],
 })
 

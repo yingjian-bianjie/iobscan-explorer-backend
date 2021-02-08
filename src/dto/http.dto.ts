@@ -249,7 +249,7 @@ export class TokensLcdDto {
     owner: string;
     is_main_token: boolean;
     total_supply: string;
-    mint_token_height: number
+    update_block_height: number
     
     constructor(value) {
         this['@type'] = value['@type'] || '';
@@ -263,7 +263,7 @@ export class TokensLcdDto {
         this.owner = value.owner || '';
         this.is_main_token = value.is_main_token || false;
         this.total_supply = value.initial_supply || '';
-        this.mint_token_height = value.mint_token_height || 0;
+        this.update_block_height = value.update_block_height || 0;
     }
 
     static bundleData(value: any = []): TokensLcdDto[] {
@@ -312,7 +312,7 @@ export class StakingValidatorLcdDto {
         this.tokens = value.tokens || '';
         this.delegator_shares = value.delegator_shares || '';
         this.description = value.description || '';
-        this.unbonding_height = value.unbonding_height || '';
+        this.unbonding_height = value.unbonding_height || '0';
         this.unbonding_time = value.unbonding_time || '';
         this.commission = value.commission || null;
         this.min_self_delegation = value.min_self_delegation || '';
@@ -380,7 +380,7 @@ export class IDelegationLcd {
 // /validatorsets/{height}
 export class Validatorset {
     address:string;
-    pub_key:string;
+    pub_key:string | object;
     proposer_priority:string;
     voting_power:string;
     constructor(value) {
@@ -590,5 +590,92 @@ export class TotalSupplyLcdDto {
     constructor(value) {
         let { supply } = value;
         this.supply = Coin.bundleData(supply);
+    }
+}
+
+export class GovParamsLcdDto {
+    voting_params: {
+        voting_period: string;
+    };
+    deposit_params: {
+        min_deposit: Coin[],
+        max_deposit_period: string
+    };
+    tally_params: {
+        quorum:string,
+        threshold:string,
+        veto_threshold:string,
+    };
+    constructor(value) {
+        this.voting_params = value.voting_params || {};
+        this.deposit_params = {
+            min_deposit: Coin.bundleData(value.deposit_params.min_deposit) || [],
+            max_deposit_period: value.deposit_params.max_deposit_period || ''
+        }
+        this.tally_params = value.tally_params || {};
+    }
+}
+
+export class GovTallyParamsLcdDto {
+    quorum: string;
+    threshold: string;
+    veto_threshold: string;
+    constructor(value) {
+        this.quorum = value.quorum || '';
+        this.threshold = value.threshold || '';
+        this.veto_threshold = value.veto_threshold || '';
+    }
+}
+
+export class GovDepositParamsLcdDto {
+    min_deposit: Coin[];
+    max_deposit_period: string
+    constructor(value) {
+        this.min_deposit = Coin.bundleData(value.min_deposit),
+        this.max_deposit_period = value.max_deposit_period || '';
+    }
+}
+
+export class GovProposalLcdDto {
+    id: number;
+    content: object;
+    status: string;
+    final_tally_result: {
+        yes: number,
+        abstain: number,
+        no: number,
+        no_with_veto: number
+    };
+    submit_time: string;
+    deposit_end_time: string;
+    total_deposit: Coin[];
+    voting_start_time: string;
+    voting_end_time: string;
+    is_deleted: boolean;
+
+    constructor(value) {
+        this.id = Number(value.proposal_id) || 0;
+        this.content = value.content || {};
+        this.status = value.status || '';
+        this.final_tally_result = {
+            yes: Number(value.final_tally_result && value.final_tally_result.yes) || 0,
+            abstain: Number(value.final_tally_result && value.final_tally_result.abstain) || 0,
+            no: Number(value.final_tally_result && value.final_tally_result.no) || 0,
+            no_with_veto: Number(value.final_tally_result && value.final_tally_result.no_with_veto) || 0,
+        };
+        this.submit_time = value.submit_time || '';
+        this.deposit_end_time = value.deposit_end_time || '';
+        this.total_deposit = Coin.bundleData(value.total_deposit);
+        this.voting_start_time = value.voting_start_time || '';
+        this.voting_end_time = value.voting_end_time || '';
+        this.is_deleted = false;
+    }
+
+    static bundleData(value: any): GovProposalLcdDto[] {
+        let data: GovProposalLcdDto[] = [];
+        data = value.map((v: any) => {
+            return new GovProposalLcdDto(v);
+        });
+        return data;
     }
 }

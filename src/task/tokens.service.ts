@@ -41,17 +41,20 @@ export class TokensTaskService {
                 TokensFromDB.map(item => {
                     if (item.symbol === token.symbol) {
                         token.total_supply = item.total_supply;
-                        token.mint_token_height = item.mint_token_height
+                        token.update_block_height = item.update_block_height
                     }
                 })
-                let data = await this.txModel.queryTxBySymbol(token.symbol, token.mint_token_height)
+                let data = await this.txModel.queryTxBySymbol(token.symbol, token.update_block_height)
                 if (data && data.length) {
                     data.forEach(item => {
-                        token.mint_token_height = item.height
+                        token.update_block_height = item.height
                         item.msgs.forEach(element => {
                             if (element.type === TxType.mint_token) {
                                 //TODO:duanjie 使用大数计算
                                 token.total_supply = String(Number(token.total_supply) + Number(element.msg.amount))
+                            } else if (element.type === TxType.burn_token) {
+                                //TODO:duanjie 使用大数计算
+                                token.total_supply = String(Number(token.total_supply) - Number(element.msg.amount))
                             }
                         })
                     })

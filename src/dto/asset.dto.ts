@@ -25,6 +25,7 @@ export class AssetListResDto {
 export class AssetDetailResDto {
     name: string;
     owner: number;
+    min_unit: string;
     total_supply: string;
     initial_supply: string;
     max_supply: string;
@@ -39,6 +40,7 @@ export class AssetDetailResDto {
         this.max_supply = value.max_supply;
         this.mintable = value.mintable;
         this.scale = value.scale;
+        this.min_unit = value.min_unit;
     }
 }
 

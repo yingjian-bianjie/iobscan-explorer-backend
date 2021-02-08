@@ -1,3 +1,4 @@
+import { HttpException } from '@nestjs/common';
 import * as mongoose from 'mongoose';
 import {
     ITxsQuery,
@@ -7,18 +8,28 @@ import {
     ITxsWithNftQuery,
     ITxsWithServiceNameQuery,
     IExFieldQuery, IIdentityTx,
+    ITxStruct,
+    ITxStructMsgs,
+    ITxStructHash,
+    ITxsWithAssetQuery,
+    ITxVoteProposal,
+    ITxSubmitProposal,
+    ITxVoteProposalAll,
+    ITxVoteALL
 } from '../types/schemaTypes/tx.interface';
-import { ITxStruct, ITxStructMsgs, ITxStructHash,ITxsWithAssetQuery } from '../types/schemaTypes/tx.interface';
 import { IBindTx, IServiceName, ITxsQueryParams } from '../types/tx.interface';
-import { IListStruct } from '../types';
-import { INCREASE_HEIGHT, TxStatus, TxType } from '../constant';
+import { IListStruct,IQueryBase } from '../types';
+import { INCREASE_HEIGHT, TxStatus, TxType,MAX_OPERATE_TX_COUNT } from '../constant';
 import Cache from '../helper/cache';
 import { dbRes } from '../helper/tx.helper';
 import { cfg } from '../config/config';
+import { PagingReqDto } from '../dto/base.dto';
 import {
     stakingTypes,
     serviceTypes,
-    declarationTypes } from '../helper/txTypes.helper';
+    declarationTypes,
+    govTypes
+} from '../helper/txTypes.helper';
 
 export const TxSchema = new mongoose.Schema({
     time: Number,
@@ -41,7 +52,7 @@ export const TxSchema = new mongoose.Schema({
     tx_index: Number,
 }, { versionKey: false });
 TxSchema.index({ time: -1, "msgs.type": -1,status:-1 }, { background: true });
-TxSchema.index({ addrs: -1, time: -1,status:-1 }, { background: true });
+TxSchema.index({ addrs: -1, time: -1, status:-1 }, { background: true });
 TxSchema.index({"msgs.type": -1,height:-1,"msgs.msg.ex.service_name":-1 }, { background: true });
 
 
@@ -190,6 +201,52 @@ TxSchema.statics.queryDeclarationTxList = async function(query: ITxsQuery): Prom
     }
     return result;
 };
+
+//  txs/gov
+TxSchema.statics.queryGovTxList = async function(query: ITxsQuery): Promise<IListStruct> {
+    const result: IListStruct = {};
+    let queryParameters: any = {};
+    if (query.type && query.type.length) {
+        queryParameters['msgs.type'] = query.type;
+    } else {
+        queryParameters['msgs.type'] = { '$in': govTypes() };
+    }
+    if (query.status && query.status.length) {
+        switch (query.status) {
+            case '1':
+                queryParameters.status = TxStatus.SUCCESS;
+                break;
+            case '2':
+                queryParameters.status = TxStatus.FAILED;
+                break;
+        }
+    }
+    if (query.address && query.address.length) {
+        queryParameters['addrs'] = { $elemMatch: { $eq: query.address } };
+    }
+    if ((query.beginTime && query.beginTime.length) || (query.endTime && query.endTime.length)) {
+        queryParameters.time = {};
+    }
+    if (query.beginTime && query.beginTime.length) {
+        queryParameters.time.$gte = Number(query.beginTime);
+    }
+    if (query.endTime && query.endTime.length) {
+        queryParameters.time.$lte = Number(query.endTime);
+    }
+    result.data = await this.find(queryParameters, dbRes.govs)
+        .sort({time: -1})
+        .skip((Number(query.pageNum) - 1) * Number(query.pageSize))
+        .limit(Number(query.pageSize));
+    if (query.useCount && query.useCount == true) {
+        result.count = await this.find(queryParameters).countDocuments();
+    }
+    return result;
+};
+
+
+
+
+
 
 //  txs/e 供edgeServer调用  返回数据不做过滤
 TxSchema.statics.queryTxListEdge = async function(types:string, gt_height:number, pageNum:number, pageSize:number, useCount:boolean): Promise<IListStruct> {
@@ -771,7 +828,7 @@ TxSchema.statics.findRespondServiceCount = async function(serviceName: string, p
     const queryParameters: any = {
         'msgs.msg.ex.service_name': serviceName,
         'msgs.type': TxType.respond_service,
-        status: TxStatus.SUCCESS,
+        // status: TxStatus.SUCCESS,
     };
     if (provider) {
         queryParameters['msgs.msg.provider'] = provider;
@@ -922,7 +979,7 @@ TxSchema.statics.queryTxListByIdentity = async function (query:IIdentityTx){
     return result;
 }
 
-TxSchema.statics.queryDepositsByAddress = async function (address: string) {
+TxSchema.statics.queryDepositsAndSubmitByAddress = async function (address: string) {
     let parameters: any = {
         'msgs.type': {'$in':[TxType.deposit, TxType.submit_proposal]},
         $or: [{'msgs.msg.depositor': address},
@@ -940,7 +997,9 @@ TxSchema.statics.queryTxBySymbol = async function(
     height: number
 ): Promise<ITxStruct | null>{
       const params =  {
-        'msgs.type': TxType.mint_token,
+          'msgs.type': {
+            $in:[TxType.mint_token,TxType.burn_token]
+          },
         status: TxStatus.SUCCESS,
         'msgs.msg.symbol': symbol,
         height: { $gt: height }
@@ -1005,6 +1064,15 @@ TxSchema.statics.queryNftTxList = async function (lastBlockHeight: number): Prom
     return await this.aggregate(cond);
 };
 
+TxSchema.statics.queryDenomTxList = async function (lastBlockHeight: number): Promise<ITxStruct[]>  {
+    return await this.find(
+        {
+            'msgs.type': TxType.issue_denom,
+            height: {
+                $gt: lastBlockHeight
+            }
+        }, { msgs: 1, height: 1, time: 1, tx_hash: 1 }).sort({ height: 1 }).limit(MAX_OPERATE_TX_COUNT);
+};
 TxSchema.statics.queryMaxNftTxList = async function (): Promise<ITxStruct[]>  {
     const typesList: TxType[] = [
         TxType.mint_nft,
@@ -1023,4 +1091,106 @@ TxSchema.statics.queryMaxNftTxList = async function (): Promise<ITxStruct[]>  {
             $in: typesList
         }
     },{height: 1}).sort({height: -1}).limit(1);
+};
+
+TxSchema.statics.queryMaxDenomTxList = async function (): Promise<ITxStruct[]>  {
+    return await this.find({ 'msgs.type': TxType.issue_denom },{height: 1}).sort({height: -1}).limit(1);
+};
+
+TxSchema.statics.querySubmitProposalById = async function (id:string): Promise<ITxSubmitProposal>  {
+    const params =  {
+        'msgs.type': TxType.submit_proposal,
+        'events.attributes.key':'proposal_id',
+        'events.attributes.value': id,
+        status:TxStatus.SUCCESS 
+      }
+    return await this.findOne(params).select({'tx_hash':1,'msgs.msg':1,'_id':0});
+};
+
+TxSchema.statics.queryVoteByProposalId = async function (id:number): Promise<ITxVoteProposal[]>  {
+    const cond = [
+        {
+            $match: { 'msgs.type': 'vote', 'msgs.msg.proposal_id': id }
+        },
+        {
+            $group: { _id: "$msgs.msg.voter", msg: { $first: "$msgs.msg" }, count: { $sum: 1 } }
+        }
+    ]
+    return await this.aggregate(cond);
+};
+
+TxSchema.statics.queryVoteByProposalIdAll = async function (id:number): Promise<ITxVoteProposalAll[]>  {
+    const params =  {
+        'msgs.type': TxType.vote,
+        'msgs.msg.proposal_id': id,
+        status:TxStatus.SUCCESS 
+      }
+    return await this.find(params,dbRes.voteList).sort({height:1});
+};
+
+TxSchema.statics.queryVoteByTxhashs = async function (hash: string[], query?: PagingReqDto): Promise<IListStruct>  {
+    const queryParameters =  {
+        'tx_hash': {
+            $in: hash
+        },
+        status:TxStatus.SUCCESS 
+    }
+    let data:IListStruct={};
+    if (query) {
+        data.data = await this.find(queryParameters, dbRes.voteList)
+        .sort({ height: -1 })
+        .skip((Number(query.pageNum) - 1) * Number(query.pageSize))
+        .limit(Number(query.pageSize));
+        if (query.useCount && query.useCount == true) {
+            data.count = await this.find(queryParameters).countDocuments();
+        }
+    } else {
+        data = await this.find(queryParameters,dbRes.voteList).sort({ height: -1 })
+    }
+    return data;
+};
+
+TxSchema.statics.queryDepositorById = async function (id:number,query: PagingReqDto): Promise<IListStruct>  {
+    const queryParameters =  {
+        'msgs.type': { $in: [TxType.deposit, TxType.submit_proposal] },
+        $or: [
+            { 'msgs.msg.proposal_id': Number(id) },
+            { 'events.attributes.key': 'proposal_id', 'events.attributes.value': String(id) }
+        ],
+        status:TxStatus.SUCCESS 
+    }
+    let result: IListStruct = {};
+    result.data = await this.find(queryParameters, dbRes.depositorList)
+        .sort({ height: -1 })
+        .skip((Number(query.pageNum) - 1) * Number(query.pageSize))
+        .limit(Number(query.pageSize));
+    if (query.useCount && query.useCount == true) {
+        result.count = await this.find(queryParameters).countDocuments();
+    }
+    return result;
+};
+
+TxSchema.statics.queryVoteByAddr = async function (address:string): Promise<ITxVoteALL[]>  {
+    const queryParameters =  {
+        'msgs.type': TxType.vote,
+        'msgs.msg.voter': address,
+        status:TxStatus.SUCCESS 
+    }
+    return await this.find(queryParameters,dbRes.voteList).sort({ height: 1 });
+};
+
+TxSchema.statics.queryDepositsByAddress = async function(address:string,query:PagingReqDto): Promise<IListStruct> {
+    let result: IListStruct = {};
+    let queryParameters = {
+        'msgs.msg.depositor': address,
+        status:TxStatus.SUCCESS
+    };
+    result.data = await this.find(queryParameters, dbRes.depositList)
+        .sort({ height: -1 })
+        .skip((Number(query.pageNum) - 1) * Number(query.pageSize))
+        .limit(Number(query.pageSize));
+    if (query.useCount && query.useCount == true) {
+        result.count = await this.find(queryParameters).countDocuments();
+    }
+    return result;
 };

@@ -58,6 +58,12 @@ export class TxController {
         return new Result<any>(data);
     }
 
+    @Get('/gov')
+    async queryGovTxList(@Query() query: TxListReqDto): Promise<Result<ListStruct<TxResDto>>> {
+        const data: ListStruct<TxResDto[]> = await this.txService.queryGovTxList(query);
+        return new Result<any>(data);
+    }
+
     // 供eageServer调用  返回数据不做过滤
     @Get('/e')
     async queryTxListEdge(@Query() query: eTxListReqDto): Promise<Result<ListStruct<any>>> {
@@ -199,6 +205,12 @@ export class TxController {
         const data: TxResDto = await this.txService.queryTxWithHash(query);
         return new Result<TxResDto>(data);
     }
+
+    @Get("/types/gov")
+    async queryGovTxTypeList(): Promise<Result<TxTypeResDto[]>>{
+        const data: TxTypeResDto[]= await this.txService.queryGovTxTypeList();
+        return new Result<TxTypeResDto[]>(data);
+    }
+
+
 }
-
-

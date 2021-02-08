@@ -19,8 +19,22 @@ export class BlockResDto {
 }
 
 export class BlockListResDto extends BlockResDto {
-    constructor(height: number, hash: string, txn: number, time: string) {
-        super(height, hash, txn, time);
+    proposer?: string;
+    total_validator_num?: number;
+    total_voting_power?: number;
+    precommit_voting_power?: number;
+    precommit_validator_num?: number;
+    proposer_moniker?: string;
+    proposer_addr?: string;
+
+    constructor(value) {
+        super(value.height, value.hash, value.txn, value.time);
+        this.total_validator_num = value.total_validator_num;
+        this.total_voting_power = value.total_voting_power;
+        this.precommit_voting_power = value.precommit_voting_power;
+        this.precommit_validator_num = value.precommit_validator_num;
+        this.proposer_moniker = value.proposer_moniker;
+        this.proposer_addr = value.proposer_addr;
     }
 }
 

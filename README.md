@@ -36,8 +36,20 @@ $ npm run start:prod
 - NFT_EXECUTE_TIME: `Optional`  execute time for nft pull（example: "21 * * * * *"）
 - TX_SERVICE_NAME_EXECUTE_TIME: `Optional`  execute time for nft pull（example: "30 * * * * *"）
 - FAULT_TOLERANCE_EXECUTE_TIME: `Optional` `string`  execute time for fault tolerance（example: "41 * * * * *"）
-- SYNC_TX_SERVICE_NAME_SIZE: `Optional` `number`  execute time for fault tolerance（example: "100"）
+- VALIDATORS_EXECTUTE_TIME `Optional` execute time for validators pull（example: "1 * * * * *"）
+- IDENTITY_EXECUTE_TIME `Optional` execute time for identity pull（example: "1 * * * * *"）
+- STAKING_VALIDATORS_TIME `Optional` execute time for stakingValidators pull（example: "15 * * * * *"）
+- STAKING_PARAMETERS `Optional` execute time for parameters pull（example: "10 * * * * *"）
+- TOKENS `Optional` execute time for parameters pull（example: "5 * * * * *"）
+- PROPLSAL `Optional` execute time for proplsal pull（example: "25 * * * * *"）
+- SYNC_TX_SERVICE_NAME_SIZE: `Optional` `number`  execute time for fault tolerance（default 200）
 - INCREASE_HEIGHT `Optional` `number` increase height for sync nft (default 1000)
 - MAX_OPERATE_TX_COUNT `Optional` `number` limit operate tx count (default 100)
+- CRON_JOBS `Optional` `array` name of the synchronization task performed (example: ["ex_sync_denom","ex_sync_nft","sync_tx_service_name","sync_validators","sync_identity","staking_sync_validators","staking_sync_parameters","tokens","ex_sync_proposal"])
+
+### Chain config
+- CURRENT_CHAIN `Optional` `string` chain name (example: "IRIS")
+- MAIN_TOKEN `Optional` `objece` chain main tonken (example: {"min_unit":"uiris","scale":"6","symbol":"iris"})
+
 ### log configure
 - DisableLog: `Optional` `string` disable Log `true/false`

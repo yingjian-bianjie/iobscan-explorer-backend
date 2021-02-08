@@ -36,3 +36,11 @@ export function declarationTypes():string[]{
         TxType.withdraw_validator_commission
     ];
 }
+
+export function govTypes():string[]{
+    return [
+        TxType.deposit,
+        TxType.vote,
+        TxType.submit_proposal
+    ];
+}

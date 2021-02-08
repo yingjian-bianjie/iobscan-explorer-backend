@@ -9,7 +9,8 @@ import {
     jailedValidatorLabel,
     moduleSlashing,
     ValidatorNumberStatus,
-    ValidatorStatus
+    ValidatorStatus,
+    voteOptions
 } from "../constant";
 import {
     AccountAddrReqDto,
@@ -23,6 +24,7 @@ import {
     DelegatorsDelegationsReqDto,DelegatorsDelegationsResDto,
     DelegatorsUndelegationsReqDto, DelegatorsUndelegationsResDto,
     DelegatorsDelegationsParamReqDto, DelegatorsUndelegationsParamReqDto,
+    ValidatorVotesResDto,ValidatorDepositsResDto
 } from "../dto/staking.dto";
 import {ListStruct} from "../api/ApiResult";
 import {BlockHttp} from "../http/lcd/block.http";
@@ -36,6 +38,7 @@ export default class StakingService {
                 @InjectModel('Parameters') private parametersModel: Model<any>,
                 @InjectModel('Tx') private txModel: Model<any>,
                 @InjectModel('Tokens') private tokensModel: any,
+                @InjectModel('Proposal') private proposalModel: any,
                 private readonly stakingHttp: StakingHttp,
     ) {
     }
@@ -121,7 +124,6 @@ export default class StakingService {
                 block: item.entries[0].creation_height || '',
                 until: item.entries[0].completion_time || '',
             }
-
         })
         const count = resultData.length
         let result: any = {}
@@ -134,7 +136,7 @@ export default class StakingService {
             let pageNationData = pageNation(resultData, q.pageSize)
             result.data = ValidatorUnBondingDelegationsResDto.bundleData(pageNationData[q.pageNum - 1])
         }
-        return new ListStruct(result.data, q.pageNum, q.pageSize, count)
+        return new ListStruct(result.data, q.pageNum, q.pageSize, result.count)
 
     }
 
@@ -174,7 +176,7 @@ export default class StakingService {
             }
             validatorDetail.total_power = await this.getTotalVotingPower()
             validatorDetail.tokens = Number(validatorDetail.tokens)
-            validatorDetail.bonded_stake = (Number(validatorDetail.self_bond.amount) * (Number(validatorDetail.tokens) / Number(validatorDetail.delegator_shares))).toString()
+            validatorDetail.bonded_stake = ((validatorDetail.self_bond && validatorDetail.self_bond.amount ? Number(validatorDetail.self_bond.amount) : 0) * (Number(validatorDetail.tokens) / Number(validatorDetail.delegator_shares))).toString()
             validatorDetail.owner_addr = addressTransform(validatorDetail.operator_address, addressPrefix.iaa)
             result = new ValidatorDetailResDto(validatorDetail)
         }
@@ -189,7 +191,7 @@ export default class StakingService {
         const allValidatorsMap = await this.getAllValidatorMonikerMap()
         const allProfilerAddress = await (this.profilerModel as any).queryProfileAddress()
         const validator = allValidatorsMap.get(operatorAddress)
-        // const deposits = await (this.txModel as any).queryDepositsByAddress(address)
+        // const deposits = await (this.txModel as any).queryDepositsAndSubmitByAddress(address)
 
         let profilerAddressMap = new Map()
         if (allProfilerAddress && allProfilerAddress.length > 0) {
@@ -271,5 +273,93 @@ export default class StakingService {
         result.count = count
         result.data = DelegatorsUndelegationsResDto.bundleData(resultData)
         return new ListStruct(result.data, pageNum, pageSize, result.count)
+    }
+
+    async getValidatorVotesList(p: ValidatorDelegationsReqDto,q: ValidatorDelegationsQueryReqDto): Promise<ListStruct<ValidatorVotesResDto>> {
+        const { address } = p;
+        let iaaAddress = addressTransform(address, addressPrefix.iaa);
+        const votesAll = await (this.txModel as any).queryVoteByAddr(iaaAddress);
+        const votes = new Map();
+        if (votesAll && votesAll.length > 0) {
+            votesAll.forEach(voter => {
+                votes.set(voter.msgs[0].msg.proposal_id, voter.tx_hash);
+            });
+        }
+        let votesList = [];
+        let count;
+        if (votes.size > 0) {
+            const hashs = [...votes.values()];
+            const votersData = await (this.txModel as any).queryVoteByTxhashs(hashs, q);
+            count = votersData.count;
+            if (votersData && votersData.data && votersData.data.length > 0) {
+                for (const vote of votersData.data) {
+                    if (vote.msgs && vote.msgs[0] && vote.msgs[0].msg) {
+                        const msg = vote.msgs[0].msg;
+                        const proposal = await this.proposalModel.findOneById(msg.proposal_id);
+                        votesList.push({
+                            title: proposal.content.title,
+                            proposal_id: msg.proposal_id,
+                            status: proposal.status,
+                            voted: voteOptions[msg.option],
+                            tx_hash: vote.tx_hash
+                        })
+                    }
+                }
+            }
+        }
+        let result: any = {};
+        if (q.useCount) {
+            result.count = count;
+        }
+        result.data = ValidatorVotesResDto.bundleData(votesList);
+        return new ListStruct(result.data, q.pageNum, q.pageSize, result.count);
+    }
+
+    async getValidatorDepositsList(p: ValidatorDelegationsReqDto,q: ValidatorDelegationsQueryReqDto): Promise<ListStruct<ValidatorDepositsResDto>> {
+        const { address } = p;
+        let iaaAddress = addressTransform(address, addressPrefix.iaa);
+        const depositsData = await (this.txModel as any).queryDepositsByAddress(iaaAddress, q);
+        let depositsList = [];
+        if (depositsData && depositsData.data && depositsData.data.length > 0) {
+            for (const depost of depositsData.data) {
+                if (depost.msgs && depost.msgs[0] && depost.msgs[0].msg) { 
+                    const msg = depost.msgs[0].msg;
+                    const proposal = await (this.txModel as any).querySubmitProposalById(String(msg.proposal_id));
+                    const proposer = proposal && proposal.msgs && proposal.msgs[0] && proposal.msgs[0].msg && proposal.msgs[0].msg.proposer;
+                    let ivaProposer = addressTransform(proposer, addressPrefix.iva);
+                    let { moniker } = await this.addMonikerAndIva(ivaProposer);
+                    depositsList.push({
+                        proposal_id: msg.proposal_id,
+                        proposer,
+                        amount: msg.amount,
+                        submited: iaaAddress == proposer,
+                        tx_hash: depost.tx_hash,
+                        moniker
+                    })
+                }
+            }
+        }
+        let result: any = {};
+        if (q.useCount) {
+            result.count = depositsData.count;
+        }
+        result.data = ValidatorDepositsResDto.bundleData(depositsList);
+        return new ListStruct(result.data, q.pageNum, q.pageSize, result.count);
+    }
+
+    async addMonikerAndIva(address) {
+        let validators = await (this.stakingValidatorsModel as any).queryAllValidators();
+        let validatorMap = {};
+        validators.forEach((item) => {
+            validatorMap[item.operator_address] = item;
+        });
+        let moniker: string;
+        let isValidator: boolean = Boolean(validatorMap[address]);
+        if (validatorMap[address] &&
+            validatorMap[address].description &&
+            validatorMap[address].description.moniker) {
+            moniker = validatorMap[address].description.moniker
+        }
+        return {moniker,isValidator};
     }
 }

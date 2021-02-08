@@ -4,7 +4,7 @@ import { MongooseModule } from '@nestjs/mongoose';
 import {DenomSchema} from '../schema/denom.schema';
 import { DenomHttp } from '../http/lcd/denom.http';
 import { TxSchema } from '../schema/tx.schema';
-
+import { SyncTaskSchema } from '../schema/sync.task.schema';
 @Module({
     imports:[
         MongooseModule.forFeature([{
@@ -15,6 +15,10 @@ import { TxSchema } from '../schema/tx.schema';
             name: 'Tx',
             schema: TxSchema,
             collection: 'sync_tx',
+        },{
+            name: 'SyncTask',
+            schema: SyncTaskSchema,
+            collection: 'sync_task'
         }]),
     ],
     providers:[DenomTaskService, DenomHttp],

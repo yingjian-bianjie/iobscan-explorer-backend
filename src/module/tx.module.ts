@@ -8,7 +8,8 @@ import { DenomSchema } from '../schema/denom.schema';
 import { NftSchema } from '../schema/nft.schema';
 import { IdentitySchema } from '../schema/identity.schema';
 import {StakingValidatorSchema} from "../schema/staking.validator.schema";
-
+import { ProposalSchema } from '../schema/proposal.schema';
+import { GovHttp } from "../http/lcd/gov.http";
 @Module({
     imports:[
         MongooseModule.forFeature([{
@@ -40,9 +41,14 @@ import {StakingValidatorSchema} from "../schema/staking.validator.schema";
             name: 'StakingValidator',
             schema: StakingValidatorSchema,
             collection: 'ex_staking_validator'
-        }])
+        },
+        {
+            name: 'Proposal',
+            schema: ProposalSchema,
+            collection: 'ex_sync_ proposal'
+        },])
     ],
-    providers:[TxService],
+    providers:[TxService,GovHttp],
     controllers:[TxController],
 })
 export class TxModule{}

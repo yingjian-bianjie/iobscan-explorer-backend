@@ -14,6 +14,7 @@ import { IdentityTaskService } from './idnetity.task.service';
 import {StakingValidatorTaskService} from "./staking.validator.task.service";
 import {ParametersTaskService} from "./parameters.task.service";
 import {TokensTaskService} from "./tokens.service";
+import {ProposalTaskService} from "./proposal.service";
 import { IRandomKey } from '../types';
 import { taskLoggerHelper } from '../helper/task.log.helper';
 
@@ -30,6 +31,7 @@ export class TasksService {
         private readonly stakingValidatorTaskService: StakingValidatorTaskService,
         private readonly parametersTaskService: ParametersTaskService,
         private readonly TokensTaskService: TokensTaskService,
+        private readonly ProposalTaskService: ProposalTaskService,
         private schedulerRegistry: SchedulerRegistry,
     ) {
         this[`${TaskEnum.denom}_timer`] = null;
@@ -39,12 +41,11 @@ export class TasksService {
         this[`${TaskEnum.identity}_timer`] = null;
         this[`${TaskEnum.stakingSyncValidators}_timer`] = null;
         this[`${TaskEnum.stakingSyncParameters}_timer`] = null;
-        this['once']= true
     }
     @Cron(cfg.taskCfg.executeTime.denom, {
         name: TaskEnum.denom
     })
-    //@Cron('50 * * * * *')
+    // @Cron('*/5 * * * * *')
     async syncDenoms() {
         this.handleDoTask(TaskEnum.denom, this.denomTaskService.doTask);
     }
@@ -76,49 +77,66 @@ export class TasksService {
     @Cron(cfg.taskCfg.executeTime.faultTolerance)
     //@Cron('18 * * * * *')
     async taskDispatchFaultTolerance() {
-        this.taskDispatchService.taskDispatchFaultTolerance((name: TaskEnum)=>{
+        this.taskDispatchService.taskDispatchFaultTolerance((name: TaskEnum) => {
             if (this[`${name}_timer`]) {
                 clearInterval(this[`${name}_timer`]);
                 this[`${name}_timer`] = null;
             }
         });
     }
+
     //@Cron('1 * * * * *')
     @Cron(cfg.taskCfg.executeTime.identity, {
         name: TaskEnum.identity
     })
     async syncIdentity() {
-        this.handleDoTask(TaskEnum.identity,this.identityTaskService.doTask)
+        this.handleDoTask(TaskEnum.identity, this.identityTaskService.doTask)
     }
+
     @Cron(cfg.taskCfg.executeTime.Tokens, {
         name: TaskEnum.Tokens
     })
     // @Cron('45 * * * * *')
     async syncTokens() {
-        this.handleDoTask(TaskEnum.Tokens,this.TokensTaskService.doTask)
+        this.handleDoTask(TaskEnum.Tokens, this.TokensTaskService.doTask)
     }
+
     // @Cron('*/5 * * * * *')
     @Cron(cfg.taskCfg.executeTime.stakingValidators, {
         name: TaskEnum.stakingSyncValidators
     })
     async syncStakingValidators() {
-       this.handleDoTask(TaskEnum.stakingSyncValidators,this.stakingValidatorTaskService.doTask)
+        this.handleDoTask(TaskEnum.stakingSyncValidators, this.stakingValidatorTaskService.doTask)
     }
+
     @Cron(cfg.taskCfg.executeTime.stakingParameters, {
         name: TaskEnum.stakingSyncParameters
     })
-    async syncStakingParmeters(){
-        this.handleDoTask(TaskEnum.stakingSyncParameters,this.parametersTaskService.doTask)
+    async syncStakingParmeters() {
+        this.handleDoTask(TaskEnum.stakingSyncParameters, this.parametersTaskService.doTask)
     }
+
+    
+    // @Cron('*/5 * * * * *')
+    @Cron(cfg.taskCfg.executeTime.Proplsal, {
+        name: TaskEnum.Proposal
+    })
+    async syncProposal() {
+        this.handleDoTask(TaskEnum.Proposal, this.ProposalTaskService.doTask)
+    }
+
     async handleDoTask(taskName: TaskEnum, doTask: TaskCallback) {
-        // 只执行一次删除定时任务
-        if (this['once'] && cfg.taskCfg.DELETE_CRON_JOBS && cfg.taskCfg.DELETE_CRON_JOBS.length) {
-            cfg.taskCfg.DELETE_CRON_JOBS.forEach(async item => {
-                this.schedulerRegistry.deleteCronJob(item)
-                await this.taskDispatchService.deleteOneByName(item)
-            })
-            this['once'] = false
+        if (cfg && cfg.taskCfg &&  cfg.taskCfg.CRON_JOBS && cfg.taskCfg.CRON_JOBS.indexOf(taskName) === -1) {
+            return
         }
+        // 只执行一次删除定时任务
+        // if (this['once'] && cfg.taskCfg.DELETE_CRON_JOBS && cfg.taskCfg.DELETE_CRON_JOBS.length) {
+        //     cfg.taskCfg.DELETE_CRON_JOBS.forEach(async item => {
+        //         this.schedulerRegistry.deleteCronJob(item)
+        //         await this.taskDispatchService.deleteOneByName(item)
+        //     })
+        //     this['once'] = false
+        // }
         const needDoTask: boolean = await this.taskDispatchService.needDoTask(taskName);
         Logger.log(`the ip ${getIpAddress()} (process pid is ${process.pid}) should do task ${taskName}? ${needDoTask}`);
         if (needDoTask) {
@@ -165,5 +183,3 @@ export class TasksService {
         await this.taskDispatchService.updateHeartbeatUpdateTime(name, randomKey);
     }
 }
-
-

@@ -46,7 +46,8 @@ export class AssetService {
                 initial_supply: token_db.initial_supply,
                 max_supply: token_db.max_supply,
                 mintable: token_db.mintable,
-                scale: token_db.scale
+                scale: token_db.scale,
+                min_unit: token_db.min_unit
             };
             result = new AssetDetailResDto(data);
         }

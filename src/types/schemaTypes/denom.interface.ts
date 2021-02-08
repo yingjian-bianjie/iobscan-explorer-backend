@@ -9,7 +9,10 @@ export interface IDenomStruct {
     height?: number,
     time?: number,
     create_time?: number,
+    last_block_height?: number,
+    last_block_time?:number
 }
+
 export interface IDenom extends IDenomStruct, Document {
     
 }
@@ -22,4 +25,11 @@ export interface IDenomMapStruct {
     height: number,
     txHash: string,
     createTime: number,
+}
+
+export interface IDenomMsgStruct {
+    id?: string,
+    name?: string,
+    sender?: string,
+    schema?: string
 }

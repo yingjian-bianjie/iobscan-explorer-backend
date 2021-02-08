@@ -13,7 +13,7 @@ export const StakingValidatorSchema = new mongoose.Schema({
     consensus_pubkey: String,
     jailed: Boolean,
     status: Number,
-    tokens: String,
+    tokens: Number,
     delegator_shares: String,
     description: Object,
     bond_height: String,
@@ -37,7 +37,7 @@ export const StakingValidatorSchema = new mongoose.Schema({
 })
 StakingValidatorSchema.index({operator_address: 1}, {unique: true})
 StakingValidatorSchema.index({proposer_addr: 1})	
-StakingValidatorSchema.index({jailed: 1, status: 1})
+StakingValidatorSchema.index({jailed: 1, status: 1,tokens:1})
 
 StakingValidatorSchema.statics = {
 
@@ -45,7 +45,7 @@ StakingValidatorSchema.statics = {
         return await this.find({})
     },
 
-    async findValidatorByPropopserAddr(PropopserAddr:string):Promise<IStakingValidator>{
+    async findValidatorByPropopserAddr(PropopserAddr: string): Promise<IStakingValidator>{
         return await this.find({proposer_addr:PropopserAddr});
     },
 
@@ -88,7 +88,7 @@ StakingValidatorSchema.statics = {
         // console.log('查询条件',queryParameters)
         result.data = await this.find(queryParameters)
             .skip((Number(query.pageNum) - 1) * Number(query.pageSize))
-            .limit(Number(query.pageSize));
+            .limit(Number(query.pageSize)).sort({ tokens: -1 });
         return result
     },
 
@@ -102,6 +102,10 @@ StakingValidatorSchema.statics = {
     async queryActiveValCount(): Promise<any> {
         let count: number;
         return count = await this.find({'status':ValidatorStatus['bonded'],'jailed':false}).countDocuments();
+    },
+
+    async queryActiveVal(): Promise<any> {
+        return await this.find({'status':ValidatorStatus['bonded'],'jailed':false});
     },
 }
 

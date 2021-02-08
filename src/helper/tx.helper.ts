@@ -105,6 +105,9 @@ const fromTo = {
         'msgs.msg.to': 1,
         'msgs.msg.src_owner': 1,
         'msgs.msg.dst_owner': 1,
+        'msgs.msg.depositor': 1,
+        'msgs.msg.voter': 1,
+        'msgs.msg.proposer': 1,
     };
 
 export const dbRes = {
@@ -143,6 +146,11 @@ export const dbRes = {
         'msgs.msg.address':1,
         'msgs.msg.min_self_delegation':1
     },
+    govs:{
+        ...common,
+        'events':1,
+        'msgs.msg':1,
+    },
     syncServiceTask:{
         'msgs.type':1,
         'msgs.msg.request_id':1,
@@ -171,6 +179,22 @@ export const dbRes = {
         'msgs.msg.mintable': 1,
         'msgs.msg.to': 1,
         'msgs.msg.src_owner': 1,
-        'msgs.msg.dst_owner': 1
+        'msgs.msg.dst_owner': 1,
+        'msgs.msg.sender':1,
+    },
+    voteList: {
+        'tx_hash': 1,
+        'msgs.msg': 1,
+        'height': 1,
+        'time': 1
+    },
+    depositorList: {
+        'tx_hash': 1,
+        'msgs': 1,
+        'time': 1
+    },
+    depositList: {
+        'tx_hash': 1,
+        'msgs.msg': 1
     }
 }

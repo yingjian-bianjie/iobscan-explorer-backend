@@ -350,5 +350,19 @@ describe('TxController', () => {
             expect(data).toBeDefined();
         });
     });
+
+    describe('queryGovTxList', () => {
+        it('should return an array of txs', async () => {
+            let req:TxListReqDto = {};
+            req.pageNum = 1;
+            req.pageSize = 2;
+            req.useCount = true;
+            
+            Logger.log('===>req:',req);
+            let data = await txService.queryGovTxList(req);
+            Logger.log('===>queryTxListCount:',data.data.length);
+            expect(data).toBeDefined();
+        });
+    });
 });
 

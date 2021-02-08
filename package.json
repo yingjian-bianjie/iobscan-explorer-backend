@@ -23,6 +23,7 @@
     "pm2": "cp .env dist/ && npx pm2 start pmconfig.json"
   },
   "dependencies": {
+    "@irisnet/irishub-sdk": "git+https://github.com/hangts/irishub-sdk-js.git#91a833a6f620018369cfae038888a29d874562f9",
     "@nestjs/common": "^7.0.0",
     "@nestjs/core": "~7.5.0",
     "@nestjs/mongoose": "~7.0.1",

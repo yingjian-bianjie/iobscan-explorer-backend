@@ -22,7 +22,8 @@ export class StakingHttp {
         switch (cfg.currentChain) {
             case currentChain.iris:
                 // iris
-                validatorLcdUri = `${cfg.serverCfg.lcdAddr}/staking/validators?status=${status}&pageNum=${pageNum}&pageSize=${pageSize}`
+                // validatorLcdUri = `${cfg.serverCfg.lcdAddr}/staking/validators?status=${status}&pageNum=${pageNum}&pageSize=${pageSize}`
+                validatorLcdUri = `${cfg.serverCfg.lcdAddr}/staking/validators?status=${status}&page=${pageNum}&limit=${pageSize}`
                 break;
             case currentChain.cosmos:
                 // cosmos
@@ -104,11 +105,12 @@ export class StakingHttp {
     }
 
     async queryValidatorDelegationsFromLcd(address) {
-        const getValidatorDelegationsUri = `${cfg.serverCfg.lcdAddr}/staking/validators/${address}/delegations`
+        // const getValidatorDelegationsUri = `${cfg.serverCfg.lcdAddr}/staking/validators/${address}/delegations`
+        const getValidatorDelegationsUri = `${cfg.serverCfg.lcdAddr}/cosmos/staking/v1beta1/validators/${address}/delegations`
         try {
             let validatorDelegationsData: any = await new HttpService().get(getValidatorDelegationsUri).toPromise().then(result => result.data)
-            if (validatorDelegationsData && validatorDelegationsData.result) {
-                return StakingValidatorDelegationLcdDto.bundleData(validatorDelegationsData.result);
+            if (validatorDelegationsData && validatorDelegationsData.delegation_responses) {
+                return StakingValidatorDelegationLcdDto.bundleData(validatorDelegationsData.delegation_responses);
             } else {
                 Logger.warn('api-error:', 'there is no result of validator delegations from lcd');
             }

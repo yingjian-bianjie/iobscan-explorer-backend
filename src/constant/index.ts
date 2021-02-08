@@ -8,7 +8,8 @@ export enum TaskEnum {
     identity = 'sync_identity',
     stakingSyncValidators = 'staking_sync_validators',
     stakingSyncParameters = 'staking_sync_parameters',
-    Tokens = 'tokens'
+    Tokens = 'tokens',
+    Proposal = 'ex_sync_proposal'
 }
 
 
@@ -49,6 +50,7 @@ export enum TxType {
     edit_token = 'edit_token',
     mint_token = 'mint_token',
     transfer_token_owner = 'transfer_token_owner',
+    burn_token= 'burn_token',
     //Transfer
     send = 'send',
     multisend = 'multisend',
@@ -142,6 +144,9 @@ export const hubDefaultEmptyValue = '[do-not-modify]'
 export const moduleSlashing = 'slashing'
 export const moduleStaking = 'staking'
 export const moduleStakingBondDenom = 'bond_denom'
+export const moduleGov = 'gov'
+export const moduleGovDeposit = 'min_deposit'
+
 
 
 export const ValidatorStatus = {
@@ -153,15 +158,21 @@ export const ValidatorStatus = {
 let addressPrefix,validatorStatusStr;
 switch (cfg.currentChain) {
     case currentChain.iris:
+        // validatorStatusStr = {
+        //     'unbonded': 'unbonded',
+        //     'unbonding': 'unbonding',
+        //     'bonded': 'bonded'
+        // };
         validatorStatusStr = {
-            'unbonded': 'unbonded',
-            'unbonding': 'unbonding',
-            'bonded': 'bonded'
+            'unbonded': 'BOND_STATUS_UNBONDED',
+            'unbonding': 'BOND_STATUS_UNBONDING',
+            'bonded': 'BOND_STATUS_BONDED'
         };
         addressPrefix = {
             iaa: 'iaa',
             iva: 'iva',
-            ica: 'ica'
+            ica: 'ica',
+            icp: 'icp'
         }
         break;
     case currentChain.cosmos:
@@ -173,7 +184,8 @@ switch (cfg.currentChain) {
         addressPrefix = {
             iaa: 'cosmos',
             iva: 'cosmosvaloper',
-            ica: 'cosmosvalcons'
+            ica: 'cosmosvalcons',
+            icp: 'cosmosvalconspub'
         }
         break;
     default:
@@ -209,3 +221,25 @@ export const correlationStr = {
     '208': 'validatorNumCount',
     '209': 'bondedTokensInformation'
 }
+
+export const proposalStatus = {
+    PROPOSAL_STATUS_DEPOSIT_PERIOD: 'DepositPeriod',
+    PROPOSAL_STATUS_VOTING_PERIOD: 'VotingPeriod',
+    PROPOSAL_STATUS_PASSED: 'Passed',
+    PROPOSAL_STATUS_REJECTED: 'Rejected'
+}
+
+export const govParams = {
+    min_deposit: 'min_deposit',
+    quorum: 'quorum',
+    threshold: 'threshold',
+    veto_threshold:'veto_threshold'
+}
+
+export const voteOptions = {
+    1: 'yes',
+    2: 'abstain',
+    3: 'no',
+    4: 'no_with_veto'
+}
+export const proposal = 'Proposal'
