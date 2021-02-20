@@ -46,6 +46,7 @@ $ npm run start:prod
 - INCREASE_HEIGHT `Optional` `number` increase height for sync nft (default 1000)
 - MAX_OPERATE_TX_COUNT `Optional` `number` limit operate tx count (default 100)
 - CRON_JOBS `Optional` `array` name of the synchronization task performed (example: ["ex_sync_denom","ex_sync_nft","sync_tx_service_name","sync_validators","sync_identity","staking_sync_validators","staking_sync_parameters","tokens","ex_sync_proposal"])
+- PROPOSALS_LIMIT `Optional` `number` proposals limit for sync proposal (default 1000)
 
 ### Chain config
 - CURRENT_CHAIN `Optional` `string` chain name (example: "IRIS")

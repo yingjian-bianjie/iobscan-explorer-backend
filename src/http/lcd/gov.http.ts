@@ -31,8 +31,8 @@ export class GovHttp {
         }
     }
 
-    async getProposals () {
-        const url = `${cfg.serverCfg.lcdAddr}/cosmos/gov/v1beta1/proposals`
+    async getProposals (limit) {
+        const url = `${cfg.serverCfg.lcdAddr}/cosmos/gov/v1beta1/proposals?pagination.limit=${limit}`
         try {
             let proposalsData: any = await new HttpService().get(url).toPromise().then(result => result.data)
             if (proposalsData) {

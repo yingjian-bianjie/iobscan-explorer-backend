@@ -26,7 +26,8 @@ const {
     CURRENT_CHAIN,
     MAIN_TOKEN,
     CRON_JOBS,
-    PROPLSAL
+    PROPLSAL,
+    PROPOSALS_LIMIT
 } = process.env;
 export const cfg = {
     env: NODE_ENV,
@@ -60,7 +61,8 @@ export const cfg = {
         syncTxServiceNameSize: Number(SYNC_TX_SERVICE_NAME_SIZE) || 200,
         increaseHeight: INCREASE_HEIGHT || 1000,
         maxOperateTxCount: MAX_OPERATE_TX_COUNT || 100,
-        CRON_JOBS: CRON_JOBS ? JSON.parse(CRON_JOBS) : []
+        CRON_JOBS: CRON_JOBS ? JSON.parse(CRON_JOBS) : [],
+        proposalsLimit: PROPOSALS_LIMIT || 1000,
     },
     currentChain: CURRENT_CHAIN || 'IRIS',
     MAIN_TOKEN: MAIN_TOKEN ? JSON.parse(MAIN_TOKEN) : {"min_unit":"umuon","scale":"6","symbol":"muon"}

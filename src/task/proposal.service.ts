@@ -6,7 +6,8 @@ import { proposalStatus, govParams, voteOptions } from '../constant'
 import { StakingHttp } from "../http/lcd/staking.http";
 import { addressTransform } from "../util/util";
 import { addressPrefix,proposal } from "../constant";
-import { getTimestamp,formatDateStringToNumber,splitString } from '../util/util';
+import { getTimestamp, formatDateStringToNumber, splitString } from '../util/util';
+import { cfg } from "../config/config"
 @Injectable()
 export class ProposalTaskService {
     constructor(
@@ -21,7 +22,7 @@ export class ProposalTaskService {
         this.doTask = this.doTask.bind(this);
     }
     async doTask(): Promise<void> {
-        const proposalFromLcd = await this.govHttp.getProposals();
+        const proposalFromLcd = await this.govHttp.getProposals(cfg.taskCfg.proposalsLimit);
         const proposalFromDb = await this.proposalModel.queryAllProposals();
         const proposalDetailFromDb = await this.proposalDetailModel.queryAllProposalsDetail();
         const govParamsFromDb = await (this.parametersTaskModel as any).queryGovParams();

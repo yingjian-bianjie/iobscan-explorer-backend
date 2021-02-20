@@ -92,13 +92,24 @@ export class GovService {
         };
         if (votes.size > 0) {
             const hashs = [...votes.values()];
+            let validators = await this.stakingValidatorModel.queryAllValidators();
+            let validatorMap = {};
+            validators.forEach((item) => {
+                validatorMap[item.operator_address] = item;
+            });
             votersData = await this.txModel.queryVoteByTxhashs(hashs);
             if (votersData && votersData.length > 0) {
                 for (const item of votersData) {
                     if (item.msgs && item.msgs[0] && item.msgs[0].msg) {
                         let msg = item.msgs[0].msg;
                         let ivaAddress = addressTransform(msg.voter, addressPrefix.iva)
-                        let { moniker, isValidator } = await this.addMonikerAndIva(ivaAddress)
+                        let isValidator: boolean = Boolean(validatorMap[ivaAddress]);
+                        let moniker;
+                        if (validatorMap[ivaAddress] &&
+                            validatorMap[ivaAddress].description &&
+                            validatorMap[ivaAddress].description.moniker) {
+                            moniker = validatorMap[ivaAddress].description.moniker
+                        }
                         statistical.all++;
                         if (isValidator) {
                             statistical.validator++
