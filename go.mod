@@ -1,6 +1,6 @@
 module github.com/bianjieai/iobscan-explorer-backend
 
-go 1.15
+go 1.16
 
 require (
 	github.com/bianjieai/ddc-sdk-go/ddc-sdk-platform-go v0.0.0-20220429103105-e2cde50aa227
