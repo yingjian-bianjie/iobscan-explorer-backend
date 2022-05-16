@@ -1,13 +1,14 @@
-FROM node:14.4.0-alpine3.12
+FROM golang:1.16-alpine3.14 as builder
 
-WORKDIR /app
+# Set up dependencies
+ENV PACKAGES make git libc-dev bash
+WORKDIR $GOPATH/src
 COPY . .
 
-RUN apk add git && npm install cnpm rimraf -g && cnpm install && npm run build
+# Install minimum necessary dependencies, build binary
+RUN apk add --no-cache $PACKAGES && make install
 
-
-#FROM node:14.4.0-alpine3.12
-#WORKDIR /app
-#COPY . .
-#COPY --from=builder /app/dist /app/dist
-CMD npm run start:prod
+FROM alpine:3.12
+COPY --from=builder /go/bin/ddcparser /usr/local/bin/ddcparser
+RUN mkdir $HOME/.ddc-parser
+CMD ddcparser start
