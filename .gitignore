@@ -1,9 +1,9 @@
 # compiled output
-/dist
-/node_modules
+vendor
 .env
 .dockerignore
 /logs
+build/*
 
 # Logs
 logs
