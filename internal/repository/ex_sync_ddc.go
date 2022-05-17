@@ -45,10 +45,6 @@ func (d ExSyncDdc) EnsureIndexes() {
 			Unique:     true,
 			Background: true,
 		},
-		mgo.Index{
-			Key:        []string{"-owner"},
-			Background: true,
-		},
 	)
 
 	ensureIndexes(d.Name(), indexes)
