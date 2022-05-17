@@ -143,15 +143,3 @@ func (d ExSyncDdc) DeleteDdc(contractAddr string, ddcId int64) error {
 	}
 	return ExecCollection(d.Name(), fn)
 }
-
-func (d ExSyncDdc) UpdateDdcLatestTxHeight(contractAddr string, ddcId int64, latestTxHeight int64) error {
-	fn := func(c *mgo.Collection) error {
-		return c.Update(bson.M{
-			"contract_address": contractAddr,
-			"ddc_id":           ddcId,
-		}, bson.M{
-			"$set": bson.M{"latest_tx_height": latestTxHeight},
-		})
-	}
-	return ExecCollection(d.Name(), fn)
-}
