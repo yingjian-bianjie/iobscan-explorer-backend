@@ -14,11 +14,10 @@ type (
 		Database string `mapstructure:"database"`
 	}
 	Server struct {
-		Prometheus         string `mapstructure:"prometheus_port"`
-		IncreHeight        int64  `mapstructure:"incre_height"`
-		InsertBatchLimit   int    `mapstructure:"insert_batch_limit"`
-		MaxOperateTxCount  int    `mapstructure:"max_operate_tx_count"`
-		DdcCronjobExectime string `mapstructure:"ddc_cronjob_exectime"`
+		Prometheus        string `mapstructure:"prometheus_port"`
+		IncreHeight       int64  `mapstructure:"incre_height"`
+		InsertBatchLimit  int    `mapstructure:"insert_batch_limit"`
+		MaxOperateTxCount int    `mapstructure:"max_operate_tx_count"`
 	}
 	DdcClientConf struct {
 		GatewayURL       string `mapstructure:"gateway_url"`

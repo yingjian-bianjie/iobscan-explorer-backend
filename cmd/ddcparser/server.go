@@ -35,6 +35,6 @@ func start(config *configs.Config) {
 	ddc_sdk.InitDDCSDKClient(config.DdcClient)
 	signal.Notify(c, os.Interrupt, os.Kill, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 
-	task.Start(config)
+	task.Start()
 	<-c
 }

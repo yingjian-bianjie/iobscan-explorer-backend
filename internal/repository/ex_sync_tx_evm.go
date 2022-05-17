@@ -65,3 +65,12 @@ func (d ExSyncTxEvm) Save(ddcTxInfo ExSyncTxEvm) error {
 	ddcTxInfo.CreateAt = time.Now().Unix()
 	return Save(&ddcTxInfo)
 }
+
+func (d ExSyncTxEvm) TxEvmLatest() (ExSyncTxEvm, error) {
+	var res ExSyncTxEvm
+	q := bson.M{}
+	fn := func(c *mgo.Collection) error {
+		return c.Find(q).Sort([]string{"-height"}...).One(&res)
+	}
+	return res, ExecCollection(d.Name(), fn)
+}

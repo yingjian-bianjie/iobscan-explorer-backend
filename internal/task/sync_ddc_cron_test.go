@@ -9,7 +9,7 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	confSrv = &configs.Config{
+	confSrv := &configs.Config{
 		DataBaseConf: configs.DataBaseConf{
 			Database: "bifrost-sync",
 			Addrs:    "localhost:27018",
@@ -39,7 +39,7 @@ func TestMain(m *testing.M) {
 }
 
 func TestStart(t *testing.T) {
-	Start(confSrv)
+	Start()
 }
 
 func TestSyncDdcTask_getMaxHeight(t *testing.T) {
@@ -66,4 +66,13 @@ func TestSyncDdcTask_getTxsWithScope(t *testing.T) {
 
 func TestSyncDdcTask_Start(t *testing.T) {
 	new(SyncDdcTask).Start()
+}
+
+func TestSyncDdcTask_handleDdcTx(t *testing.T) {
+	txs := new(SyncDdcTask).getDdcTxsWithScope(819487, 819590)
+	data, err := new(SyncDdcTask).handleDdcTx(&txs[0])
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	t.Log(data)
 }
