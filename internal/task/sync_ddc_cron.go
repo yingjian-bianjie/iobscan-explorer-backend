@@ -57,7 +57,7 @@ func (d SyncDdcTask) Start() {
 	if maxHeight > 0 && ddcLatestHeight < maxHeight {
 		txs := d.getDdcTxsWithScope(ddcLatestHeight, maxHeight)
 		if err := d.handleTxs(txs); err != nil {
-			if err != mgo.ErrNotFound {
+			if err != mgo.ErrNotFound && err != constant.ErrDbExist {
 				logger.Error("failed to handle Txs " + err.Error())
 			}
 			return
@@ -66,15 +66,17 @@ func (d SyncDdcTask) Start() {
 
 }
 func (d SyncDdcTask) handleTxs(txs []repository.Tx) error {
+	evmTxs := make([]*repository.ExSyncTxEvm, 0, len(txs))
 	var latestTxHeight int64
 	for _, tx := range txs {
 		if latestTxHeight < tx.Height {
 			latestTxHeight = tx.Height
 		}
-		err := d.handleDdcTx(&tx)
-		if err != nil && err != constant.ErrDbExist {
+		evmTx, err := d.handleDdcTx(&tx)
+		if err != nil {
 			return err
 		}
+		evmTxs = append(evmTxs, evmTx)
 	}
 
 	//update latest ddc latest_tx_height
@@ -83,10 +85,10 @@ func (d SyncDdcTask) handleTxs(txs []repository.Tx) error {
 		return err
 	}
 	if ddc.LatestTxHeight < latestTxHeight {
-		return d.syncDdcModel.UpdateDdcLatestTxHeight(ddc.ContractAddress, ddc.DdcId, latestTxHeight)
+		ddc.LatestTxHeight = latestTxHeight
 	}
 
-	return nil
+	return d.bitchSaveWithTxn(evmTxs, ddc)
 }
 func parseContractsInput(inputDataStr string, doctx *contracts.DocMsgEthereumTx) error {
 	ddcMethodId := inputDataStr[:8]
@@ -218,7 +220,7 @@ func (d SyncDdcTask) handleOneMsg(msg repository.TxMsg, tx *repository.Tx) ([]re
 				ddcDoc.DdcData = util.MarshalJsonIgnoreErr(evmData.EvmInputs)
 
 				if tx.Status == repository.TxStatusSuccess {
-					if err := d.syncDdcModel.Save(*ddcDoc); err != nil {
+					if err := d.syncDdcModel.Save(*ddcDoc); err != nil && err != constant.ErrDbExist {
 						//return err when failed to save ddc data to ex_sync_ddc
 						return ddcsInfo, evmDatas, err
 					}
@@ -261,9 +263,9 @@ func (d SyncDdcTask) handleOneMsg(msg repository.TxMsg, tx *repository.Tx) ([]re
 	return ddcsInfo, evmDatas, nil
 }
 
-func (d SyncDdcTask) handleDdcTx(tx *repository.Tx) error {
+func (d SyncDdcTask) handleDdcTx(tx *repository.Tx) (*repository.ExSyncTxEvm, error) {
 	if len(tx.DocTxMsgs) == 0 {
-		return errors.New("empty msg")
+		return nil, errors.New("empty msg")
 	}
 	var ddcsInfo []repository.DdcInfo
 	var evmDatas []repository.EvmData
@@ -285,14 +287,14 @@ func (d SyncDdcTask) handleDdcTx(tx *repository.Tx) error {
 				logger.Warn("skip tx msg for " + err.Error() + fmt.Sprint(" height: ", tx.Height, " txHash: ", tx.TxHash))
 				continue
 			}
-			return err
+			return nil, err
 		}
 		ddcsInfo = append(ddcsInfo, ddcinfos...)
 		evmDatas = append(evmDatas, evmdatas...)
 
 	}
 
-	txInfo := repository.ExSyncTxEvm{
+	txInfo := &repository.ExSyncTxEvm{
 		Time:       tx.Time,
 		Height:     tx.Height,
 		TxHash:     tx.TxHash,
@@ -303,7 +305,7 @@ func (d SyncDdcTask) handleDdcTx(tx *repository.Tx) error {
 		EvmDatas:   evmDatas,
 		ExDdcInfos: ddcsInfo,
 	}
-	return d.ddcTxInfoModel.Save(txInfo)
+	return txInfo, nil
 }
 
 func (d SyncDdcTask) createExSyncDdcByDdcId(ddcId int64, msgEtheumTx *contracts.DocMsgEthereumTx) *repository.ExSyncDdc {
@@ -345,12 +347,12 @@ func (d SyncDdcTask) deleteDdcs(ddcId int64, contractAddr string) error {
 	return nil
 }
 
-func (d SyncDdcTask) bitchSave(ddcs []*repository.ExSyncDdc) error {
+func (d SyncDdcTask) bitchSaveWithTxn(evmTxs []*repository.ExSyncTxEvm, ddc repository.ExSyncDdc) error {
 
 	insertOps := make([]txn.Op, 0, repository.GetSrvConf().InsertBatchLimit)
-	for _, val := range ddcs {
+	for _, val := range evmTxs {
 		op := txn.Op{
-			C:      d.syncDdcModel.Name(),
+			C:      d.ddcTxInfoModel.Name(),
 			Id:     bson.NewObjectId(),
 			Insert: val,
 		}
@@ -361,6 +363,17 @@ func (d SyncDdcTask) bitchSave(ddcs []*repository.ExSyncDdc) error {
 			}
 			insertOps = make([]txn.Op, 0, repository.GetSrvConf().InsertBatchLimit)
 		}
+	}
+	if ddc.DdcId > 0 {
+		updateOp := txn.Op{
+			C:      d.syncDdcModel.Name(),
+			Id:     ddc.ID,
+			Assert: txn.DocMissing,
+			Update: bson.M{
+				"$set": bson.M{"latest_tx_height": ddc.LatestTxHeight},
+			},
+		}
+		insertOps = append(insertOps, updateOp)
 	}
 	if len(insertOps) > 0 {
 		return repository.Txn(insertOps)
