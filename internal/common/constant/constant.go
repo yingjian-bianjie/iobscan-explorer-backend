@@ -8,3 +8,8 @@ var (
 	SkipErrmsgNoSupport        = errors.New("no implement method parse code")
 	ErrDbExist                 = errors.New("save failed for already exist")
 )
+
+const (
+	SyncDdcTaskName     = "SyncDdcTaskName"
+	CronTimeSyncDdcTask = 30
+)

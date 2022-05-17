@@ -11,23 +11,22 @@ const (
 )
 
 type ExSyncDdc struct {
-	ID              bson.ObjectId `bson:"_id"`
-	DdcId           int64         `bson:"ddc_id"`
-	DdcType         int           `bson:"ddc_type"`
-	DdcSymbl        string        `bson:"ddc_symbl"`
-	DdcName         string        `bson:"ddc_name"`
-	ContractAddress string        `bson:"contract_address"`
-	DdcUri          string        `bson:"ddc_uri"`
-	Owner           string        `bson:"owner"`
-	Creator         string        `bson:"creator"`
-	Amount          int           `bson:"amount"`
-	DdcData         string        `bson:"ddc_data"`
-	LatestTxTime    int64         `bson:"latest_tx_time"`
-	LatestTxHeight  int64         `bson:"latest_tx_height"`
-	IsDelete        bool          `bson:"is_delete"`
-	IsFreeze        bool          `bson:"is_freeze"`
-	CreateAt        int64         `bson:"create_at"`
-	UpdateAt        int64         `bson:"update_at"`
+	DdcId           int64  `bson:"ddc_id"`
+	DdcType         int    `bson:"ddc_type"`
+	DdcSymbl        string `bson:"ddc_symbl"`
+	DdcName         string `bson:"ddc_name"`
+	ContractAddress string `bson:"contract_address"`
+	DdcUri          string `bson:"ddc_uri"`
+	Owner           string `bson:"owner"`
+	Creator         string `bson:"creator"`
+	Amount          int    `bson:"amount"`
+	DdcData         string `bson:"ddc_data"`
+	LatestTxTime    int64  `bson:"latest_tx_time"`
+	LatestTxHeight  int64  `bson:"latest_tx_height"`
+	IsDelete        bool   `bson:"is_delete"`
+	IsFreeze        bool   `bson:"is_freeze"`
+	CreateAt        int64  `bson:"create_at"`
+	UpdateAt        int64  `bson:"update_at"`
 }
 
 func (d ExSyncDdc) Name() string {
@@ -84,7 +83,6 @@ func (d ExSyncDdc) count(q map[string]interface{}) (int, error) {
 }
 
 func (d ExSyncDdc) Save(ddc ExSyncDdc) error {
-	ddc.ID = bson.NewObjectId()
 	ddc.CreateAt = time.Now().Unix()
 	return Save(&ddc)
 }
@@ -139,6 +137,18 @@ func (d ExSyncDdc) DeleteDdc(contractAddr string, ddcId int64) error {
 			"ddc_id":           ddcId,
 		}, bson.M{
 			"$set": bson.M{"is_delete": true},
+		})
+	}
+	return ExecCollection(d.Name(), fn)
+}
+
+func (d ExSyncDdc) UpdateDdcLatestTxHeight(contractAddr string, ddcId int64, latestTxHeight int64) error {
+	fn := func(c *mgo.Collection) error {
+		return c.Update(bson.M{
+			"contract_address": contractAddr,
+			"ddc_id":           ddcId,
+		}, bson.M{
+			"$set": bson.M{"latest_tx_height": latestTxHeight},
 		})
 	}
 	return ExecCollection(d.Name(), fn)

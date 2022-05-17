@@ -5,6 +5,8 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"gopkg.in/mgo.v2/bson"
+	"gopkg.in/mgo.v2/txn"
 
 	"github.com/bianjieai/iobscan-explorer-backend/internal/common/constant"
 	"github.com/bianjieai/iobscan-explorer-backend/internal/common/contracts"
@@ -14,8 +16,6 @@ import (
 	"github.com/bianjieai/iobscan-explorer-backend/pkg/logger"
 	"github.com/ethereum/go-ethereum/common"
 	"gopkg.in/mgo.v2"
-	"gopkg.in/mgo.v2/bson"
-	"gopkg.in/mgo.v2/txn"
 )
 
 type SyncDdcTask struct {
@@ -25,44 +25,62 @@ type SyncDdcTask struct {
 	txModel        repository.Tx
 }
 
+func (d SyncDdcTask) Name() string {
+	return constant.SyncDdcTaskName
+}
+
+func (d SyncDdcTask) Cron() int {
+	return constant.CronTimeSyncDdcTask
+}
+
+func (d SyncDdcTask) DoTask(fn func(string) chan bool) error {
+	return nil
+}
+
 func (d SyncDdcTask) Start() {
-	//logger.Debug("sync ddc cron task start...")
-	defer func() {
-		if err := recover(); err != nil {
-			logger.Error("occur error", logger.Any("err", err))
-		}
-		//logger.Debug("sync ddc cron task exit...")
-	}()
-
-	follow, err := d.syncTask.QueryValidFollowTasks()
-	if err != nil {
-		logger.Error("failed to get ValidFollowTasks " + err.Error())
-		return
-	}
-	if !follow {
-		logger.Warn("waiting sync working is follow......")
-		return
-	}
-	ddcLatestHeight, err := d.getDdcLatestHeight()
-	if err != nil {
-		logger.Error("failed to get DdcLatestHeight " + err.Error())
-		return
-	}
-	maxHeight, err := d.getMaxHeight()
-	if err != nil {
-		logger.Error("failed to get MaxHeight " + err.Error())
-		return
-	}
-
-	if maxHeight > 0 && ddcLatestHeight < maxHeight {
-		txs := d.getDdcTxsWithScope(ddcLatestHeight, maxHeight)
-		if err := d.handleTxs(txs); err != nil {
-			if err != mgo.ErrNotFound && err != constant.ErrDbExist {
-				logger.Error("failed to handle Txs " + err.Error())
+	handleDdc := func() {
+		//logger.Debug("sync ddc cron task start...")
+		defer func() {
+			if err := recover(); err != nil {
+				logger.Error("occur error", logger.Any("err", err))
 			}
+			//logger.Debug("sync ddc cron task exit...")
+		}()
+
+		follow, err := d.syncTask.QueryValidFollowTasks()
+		if err != nil {
+			logger.Error("failed to get ValidFollowTasks " + err.Error())
 			return
 		}
+		if !follow {
+			logger.Warn("waiting sync working is follow......")
+			return
+		}
+		ddcLatestHeight, err := d.getDdcLatestHeight()
+		if err != nil {
+			logger.Error("failed to get DdcLatestHeight " + err.Error())
+			return
+		}
+		maxHeight, err := d.getMaxHeight()
+		if err != nil {
+			logger.Error("failed to get MaxHeight " + err.Error())
+			return
+		}
+
+		if maxHeight > 0 && ddcLatestHeight < maxHeight {
+			txs := d.getDdcTxsWithScope(ddcLatestHeight, maxHeight)
+			if err := d.handleTxs(txs); err != nil {
+				if err != mgo.ErrNotFound && err != constant.ErrDbExist {
+					logger.Error("failed to handle Txs " + err.Error())
+				}
+				return
+			}
+		}
 	}
+
+	util.RunTimer(d.Cron(), util.Sec, func() {
+		handleDdc()
+	})
 
 }
 func (d SyncDdcTask) handleTxs(txs []repository.Tx) error {
@@ -79,16 +97,22 @@ func (d SyncDdcTask) handleTxs(txs []repository.Tx) error {
 		evmTxs = append(evmTxs, evmTx)
 	}
 
+	if len(evmTxs) > 0 {
+		if err := d.bitchSaveWithTxn(evmTxs); err != nil {
+			return err
+		}
+	}
+
 	//update latest ddc latest_tx_height
 	ddc, err := d.syncDdcModel.DdcLatest()
 	if err != nil {
 		return err
 	}
 	if ddc.LatestTxHeight < latestTxHeight {
-		ddc.LatestTxHeight = latestTxHeight
+		return d.syncDdcModel.UpdateDdcLatestTxHeight(ddc.ContractAddress, ddc.DdcId, latestTxHeight)
 	}
 
-	return d.bitchSaveWithTxn(evmTxs, ddc)
+	return nil
 }
 func parseContractsInput(inputDataStr string, doctx *contracts.DocMsgEthereumTx) error {
 	ddcMethodId := inputDataStr[:8]
@@ -199,11 +223,12 @@ func (d SyncDdcTask) handleOneMsg(msg repository.TxMsg, tx *repository.Tx) ([]re
 					//return err when failed to get ddc data
 					return ddcsInfo, evmDatas, err
 				}
-				owner, _ := ddc_sdk.Client().HexToBech32(ddcOwner)
-				if err := d.syncDdcModel.UpdateOwnerOrUri(msgEtheumTx.ContractAddr, int64(ddcId), owner, ""); err != nil {
-					return ddcsInfo, evmDatas, err
+				if ddcOwner != "" {
+					owner, _ := ddc_sdk.Client().HexToBech32(ddcOwner)
+					if err := d.syncDdcModel.UpdateOwnerOrUri(msgEtheumTx.ContractAddr, int64(ddcId), owner, ""); err != nil {
+						return ddcsInfo, evmDatas, err
+					}
 				}
-
 				break
 			case contracts.MintDdc, contracts.SafeMintDdc, contracts.MintBatchDdc:
 				ddcid := int64(ddcId)
@@ -347,7 +372,7 @@ func (d SyncDdcTask) deleteDdcs(ddcId int64, contractAddr string) error {
 	return nil
 }
 
-func (d SyncDdcTask) bitchSaveWithTxn(evmTxs []*repository.ExSyncTxEvm, ddc repository.ExSyncDdc) error {
+func (d SyncDdcTask) bitchSaveWithTxn(evmTxs []*repository.ExSyncTxEvm) error {
 
 	insertOps := make([]txn.Op, 0, repository.GetSrvConf().InsertBatchLimit)
 	for _, val := range evmTxs {
@@ -363,17 +388,6 @@ func (d SyncDdcTask) bitchSaveWithTxn(evmTxs []*repository.ExSyncTxEvm, ddc repo
 			}
 			insertOps = make([]txn.Op, 0, repository.GetSrvConf().InsertBatchLimit)
 		}
-	}
-	if ddc.DdcId > 0 {
-		updateOp := txn.Op{
-			C:      d.syncDdcModel.Name(),
-			Id:     ddc.ID,
-			Assert: txn.DocMissing,
-			Update: bson.M{
-				"$set": bson.M{"latest_tx_height": ddc.LatestTxHeight},
-			},
-		}
-		insertOps = append(insertOps, updateOp)
 	}
 	if len(insertOps) > 0 {
 		return repository.Txn(insertOps)
