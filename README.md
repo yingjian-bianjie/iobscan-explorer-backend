@@ -23,7 +23,6 @@ prometheus_port="9092"
 max_operate_tx_count=100
 insert_batch_limit=100
 incre_height=10
-ddc_cronjob_exectime="1 */1 * * * ?"
 
 
 
