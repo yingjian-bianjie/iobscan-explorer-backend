@@ -92,18 +92,63 @@ func (d ExSyncDdc) DdcLatest() (ExSyncDdc, error) {
 	return d.findOne(q, []string{"-latest_tx_height"})
 }
 
-func (d ExSyncDdc) Update(contractAddr string, ddcId int64, data bson.M) error {
-	//data := bson.M{
-	//	"ddc_symbl": "",
-	//	"ddc_name": "",
-	//	"ddc_uri": "",
-	//}
+func (d ExSyncDdc) UpdateOwnerOrUri(contractAddr string, ddcId int64, owner, uri string) error {
+	editData := bson.M{}
+	if owner != "" {
+		editData["owner"] = owner
+	}
+	if uri != "" {
+		editData["ddc_uri"] = uri
+	}
 	fn := func(c *mgo.Collection) error {
 		return c.Update(bson.M{
 			"contract_address": contractAddr,
 			"ddc_id":           ddcId,
 		}, bson.M{
-			"$set": data,
+			"$set": editData,
+		})
+	}
+	return ExecCollection(d.Name(), fn)
+}
+
+func (d ExSyncDdc) UpdateNameAndSymbol(contractAddr string, ddcId int64, name, symbol string) error {
+	editData := bson.M{}
+	if name != "" {
+		editData["ddc_name"] = name
+	}
+	if symbol != "" {
+		editData["ddc_symbol"] = symbol
+	}
+	fn := func(c *mgo.Collection) error {
+		return c.Update(bson.M{
+			"contract_address": contractAddr,
+			"ddc_id":           ddcId,
+		}, bson.M{
+			"$set": editData,
+		})
+	}
+	return ExecCollection(d.Name(), fn)
+}
+
+func (d ExSyncDdc) DeleteDdc(contractAddr string, ddcId int64) error {
+	fn := func(c *mgo.Collection) error {
+		return c.Update(bson.M{
+			"contract_address": contractAddr,
+			"ddc_id":           ddcId,
+		}, bson.M{
+			"$set": bson.M{"is_delete": true},
+		})
+	}
+	return ExecCollection(d.Name(), fn)
+}
+
+func (d ExSyncDdc) UpdateDdcLatestTxHeight(contractAddr string, ddcId int64, latestTxHeight int64) error {
+	fn := func(c *mgo.Collection) error {
+		return c.Update(bson.M{
+			"contract_address": contractAddr,
+			"ddc_id":           ddcId,
+		}, bson.M{
+			"$set": bson.M{"latest_tx_height": latestTxHeight},
 		})
 	}
 	return ExecCollection(d.Name(), fn)

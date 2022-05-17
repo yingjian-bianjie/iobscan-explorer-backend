@@ -26,12 +26,12 @@ type SyncDdcTask struct {
 }
 
 func (d SyncDdcTask) Start() {
-	logger.Debug("sync ddc cron task start...")
+	//logger.Debug("sync ddc cron task start...")
 	defer func() {
 		if err := recover(); err != nil {
 			logger.Error("occur error", logger.Any("err", err))
 		}
-		logger.Debug("sync ddc cron task exit...")
+		//logger.Debug("sync ddc cron task exit...")
 	}()
 
 	follow, err := d.syncTask.QueryValidFollowTasks()
@@ -45,16 +45,12 @@ func (d SyncDdcTask) Start() {
 	}
 	ddcLatestHeight, err := d.getDdcLatestHeight()
 	if err != nil {
-		if err != mgo.ErrNotFound {
-			logger.Error("failed to get DdcLatestHeight " + err.Error())
-		}
+		logger.Error("failed to get DdcLatestHeight " + err.Error())
 		return
 	}
 	maxHeight, err := d.getMaxHeight()
 	if err != nil {
-		if err != mgo.ErrNotFound {
-			logger.Error("failed to get MaxHeight " + err.Error())
-		}
+		logger.Error("failed to get MaxHeight " + err.Error())
 		return
 	}
 
@@ -70,10 +66,10 @@ func (d SyncDdcTask) Start() {
 
 }
 func (d SyncDdcTask) handleTxs(txs []repository.Tx) error {
-	var latest_tx_height int64
+	var latestTxHeight int64
 	for _, tx := range txs {
-		if latest_tx_height < tx.Height {
-			latest_tx_height = tx.Height
+		if latestTxHeight < tx.Height {
+			latestTxHeight = tx.Height
 		}
 		err := d.handleDdcTx(&tx)
 		if err != nil && err != constant.ErrDbExist {
@@ -86,8 +82,8 @@ func (d SyncDdcTask) handleTxs(txs []repository.Tx) error {
 	if err != nil {
 		return err
 	}
-	if ddc.LatestTxHeight < latest_tx_height {
-		return d.syncDdcModel.Update(ddc.ContractAddress, ddc.DdcId, bson.M{"latest_tx_height": latest_tx_height})
+	if ddc.LatestTxHeight < latestTxHeight {
+		return d.syncDdcModel.UpdateDdcLatestTxHeight(ddc.ContractAddress, ddc.DdcId, latestTxHeight)
 	}
 
 	return nil
@@ -174,7 +170,7 @@ func (d SyncDdcTask) handleOneMsg(msg repository.TxMsg, tx *repository.Tx) ([]re
 	ddcOpt, exist := contracts.DdcMethod[msgEtheumTx.Method]
 	if !exist {
 		//todo
-		logger.Error("no support ddcMethod: " + msgEtheumTx.Method)
+		logger.Warn("no support ddcMethod: " + msgEtheumTx.Method)
 		return ddcsInfo, evmDatas, constant.SkipErrmsgNoSupport
 	}
 	for _, ddcId := range ddcIds {
@@ -202,7 +198,7 @@ func (d SyncDdcTask) handleOneMsg(msg repository.TxMsg, tx *repository.Tx) ([]re
 					return ddcsInfo, evmDatas, err
 				}
 				owner, _ := ddc_sdk.Client().HexToBech32(ddcOwner)
-				if err := d.editDdcs(ddcId, msgEtheumTx.ContractAddr, bson.M{"owner": owner}); err != nil {
+				if err := d.syncDdcModel.UpdateOwnerOrUri(msgEtheumTx.ContractAddr, int64(ddcId), owner, ""); err != nil {
 					return ddcsInfo, evmDatas, err
 				}
 
@@ -239,20 +235,13 @@ func (d SyncDdcTask) handleOneMsg(msg repository.TxMsg, tx *repository.Tx) ([]re
 					logger.Warn("failed to get ddcSymbol " + err.Error())
 				}
 				if name != "" || symbol != "" {
-					editData := bson.M{}
-					if name != "" {
-						editData["ddc_name"] = name
-					}
-					if symbol != "" {
-						editData["ddc_symbol"] = symbol
-					}
-					if err := d.editDdcs(ddcId, msgEtheumTx.ContractAddr, editData); err != nil {
+					if err := d.syncDdcModel.UpdateNameAndSymbol(msgEtheumTx.ContractAddr, int64(ddcId), name, symbol); err != nil {
 						return ddcsInfo, evmDatas, err
 					}
 				}
 				break
 			case contracts.SetURI:
-				if err := d.editDdcs(ddcId, msgEtheumTx.ContractAddr, bson.M{"ddc_uri": ddcUri}); err != nil {
+				if err := d.syncDdcModel.UpdateOwnerOrUri(msgEtheumTx.ContractAddr, int64(ddcId), "", ddcUri); err != nil {
 					return ddcsInfo, evmDatas, err
 				}
 				break
@@ -317,56 +306,6 @@ func (d SyncDdcTask) handleDdcTx(tx *repository.Tx) error {
 	return d.ddcTxInfoModel.Save(txInfo)
 }
 
-//func (d SyncDdcTask) getDdc721InfoByDdcId(ddcId int64, msgEtheumTx *contracts.DocMsgEthereumTx) (*repository.ExSyncDdc, error) {
-//	var (
-//		ddcUri    string
-//		ddcName   string
-//		ddcSymbol string
-//		ddcOwner  string
-//		ddcData   string
-//		err       error
-//	)
-//	switch msgEtheumTx.DdcType {
-//	case contracts.ContractDDC721:
-//		if ddcSymbol, err = ddc_sdk.Client().GetDDC721Service().Symbol(); err != nil {
-//			return nil, err
-//		}
-//		if ddcName, err = ddc_sdk.Client().GetDDC721Service().Name(); err != nil {
-//			return nil, err
-//		}
-//		if ddcUri, err = ddc_sdk.Client().GetDDC721Service().DdcURI(ddcId); err != nil {
-//			return nil, err
-//		}
-//		if owner, err1 := ddc_sdk.Client().GetDDC721Service().OwnerOf(ddcId); err1 != nil {
-//			return nil, err1
-//		} else {
-//			if ddcOwner, err = ddc_sdk.Client().GetDDC721Service().HexToBech32(owner); err != nil {
-//				return nil, err
-//			}
-//		}
-//
-//		if len(msgEtheumTx.Inputs) > 1 {
-//			ddcData = msgEtheumTx.Inputs[1]
-//		}
-//
-//	}
-//	data := &repository.ExSyncDdc{
-//		DdcId:           ddcId,
-//		DdcType:         contracts.DdcType[msgEtheumTx.DdcType],
-//		DdcName:         ddcName,
-//		DdcSymbl:        ddcSymbol,
-//		ContractAddress: msgEtheumTx.ContractAddr,
-//		DdcData:         ddcData,
-//		Creator:         msgEtheumTx.Signer,
-//		Owner:           ddcOwner,
-//		//Amount:          amount,
-//		DdcUri:         ddcUri,
-//		LatestTxHeight: msgEtheumTx.TxHeight,
-//		LatestTxTime:   msgEtheumTx.TxTime,
-//	}
-//	return data, nil
-//}
-
 func (d SyncDdcTask) createExSyncDdcByDdcId(ddcId int64, msgEtheumTx *contracts.DocMsgEthereumTx) *repository.ExSyncDdc {
 	data := &repository.ExSyncDdc{
 		DdcId:   ddcId,
@@ -400,14 +339,7 @@ func (d SyncDdcTask) getDdcTxsWithScope(latestHeight, maxHeight int64) []reposit
 }
 
 func (d SyncDdcTask) deleteDdcs(ddcId int64, contractAddr string) error {
-	if err := d.syncDdcModel.Update(contractAddr, ddcId, bson.M{"is_delete": true}); err != nil && err != mgo.ErrNotFound {
-		return err
-	}
-	return nil
-}
-
-func (d SyncDdcTask) editDdcs(ddcId uint64, contractAddr string, editData bson.M) error {
-	if err := d.syncDdcModel.Update(contractAddr, int64(ddcId), editData); err != nil && err != mgo.ErrNotFound {
+	if err := d.syncDdcModel.DeleteDdc(contractAddr, ddcId); err != nil && err != mgo.ErrNotFound {
 		return err
 	}
 	return nil
@@ -438,7 +370,7 @@ func (d SyncDdcTask) bitchSave(ddcs []*repository.ExSyncDdc) error {
 
 func (d SyncDdcTask) getMaxHeight() (int64, error) {
 	latestTx, err := d.txModel.FindLatestTx()
-	if err != nil {
+	if err != nil && err != mgo.ErrNotFound {
 		return 0, err
 	}
 	return latestTx.Height, nil
@@ -448,6 +380,14 @@ func (d SyncDdcTask) getDdcLatestHeight() (int64, error) {
 	ddc, err := d.syncDdcModel.DdcLatest()
 	if err != nil && err != mgo.ErrNotFound {
 		return 0, err
+	}
+	//if get latest tx height from tx_evm when ex_sync_ddc data is empty
+	if ddc.LatestTxHeight == 0 {
+		txEvm, err := d.ddcTxInfoModel.TxEvmLatest()
+		if err != nil && err != mgo.ErrNotFound {
+			return 0, err
+		}
+		return txEvm.Height, nil
 	}
 
 	return ddc.LatestTxHeight, nil
