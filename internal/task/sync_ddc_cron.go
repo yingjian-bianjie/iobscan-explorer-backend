@@ -43,16 +43,16 @@ func (d SyncDdcTask) DoTask(fn func(string) chan bool) error {
 }
 
 func (d SyncDdcTask) Start() {
-	vmCfgData, err := d.evmCfgModel.FindAll()
+	evmContractCfgData, err := d.evmCfgModel.FindAll()
 	if err != nil {
 		logger.Fatal("failed to get data from " + d.evmCfgModel.Name() + err.Error())
 	}
-	if len(vmCfgData) == 0 {
+	if len(evmContractCfgData) == 0 {
 		logger.Fatal(d.evmCfgModel.Name() + " data should config.")
 	}
-	d.contractABIsMap = make(map[string]abi.ABI, len(vmCfgData))
-	d.contractTypeNamesMap = make(map[string]string, len(vmCfgData))
-	for _, val := range vmCfgData {
+	d.contractABIsMap = make(map[string]abi.ABI, len(evmContractCfgData))
+	d.contractTypeNamesMap = make(map[string]string, len(evmContractCfgData))
+	for _, val := range evmContractCfgData {
 		abiServer, err := abi.JSON(strings.NewReader(val.AbiContent))
 		if err != nil {
 			logger.Fatal(err.Error())
