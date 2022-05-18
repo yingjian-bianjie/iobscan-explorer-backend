@@ -5,8 +5,10 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"github.com/ethereum/go-ethereum/accounts/abi"
 	"gopkg.in/mgo.v2/bson"
 	"gopkg.in/mgo.v2/txn"
+	"strings"
 
 	"github.com/bianjieai/iobscan-explorer-backend/internal/common/constant"
 	"github.com/bianjieai/iobscan-explorer-backend/internal/common/contracts"
@@ -19,10 +21,13 @@ import (
 )
 
 type SyncDdcTask struct {
-	ddcTxInfoModel repository.ExSyncTxEvm
-	syncDdcModel   repository.ExSyncDdc
-	syncTask       repository.SyncTask
-	txModel        repository.Tx
+	ddcTxInfoModel       repository.ExSyncTxEvm
+	syncDdcModel         repository.ExSyncDdc
+	syncTask             repository.SyncTask
+	txModel              repository.Tx
+	evmCfgModel          repository.ExEvmContractsConfig
+	contractABIsMap      map[string]abi.ABI
+	contractTypeNamesMap map[string]string
 }
 
 func (d SyncDdcTask) Name() string {
@@ -38,6 +43,25 @@ func (d SyncDdcTask) DoTask(fn func(string) chan bool) error {
 }
 
 func (d SyncDdcTask) Start() {
+	vmCfgData, err := d.evmCfgModel.FindAll()
+	if err != nil {
+		logger.Fatal("failed to get data from " + d.evmCfgModel.Name() + err.Error())
+	}
+	if len(vmCfgData) == 0 {
+		logger.Fatal(d.evmCfgModel.Name() + " data should config.")
+	}
+	d.contractABIsMap = make(map[string]abi.ABI, len(vmCfgData))
+	d.contractTypeNamesMap = make(map[string]string, len(vmCfgData))
+	for _, val := range vmCfgData {
+		abiServer, err := abi.JSON(strings.NewReader(val.AbiContent))
+		if err != nil {
+			logger.Fatal(err.Error())
+		}
+		d.contractABIsMap[val.Address] = abiServer
+		d.contractTypeNamesMap[val.Address] = contracts.DdcTypeName[val.Type]
+	}
+	logger.Info("load contract config  data success.")
+
 	handleDdc := func() {
 		//logger.Debug("sync ddc cron task start...")
 		defer func() {
@@ -114,22 +138,26 @@ func (d SyncDdcTask) handleTxs(txs []repository.Tx) error {
 
 	return nil
 }
-func parseContractsInput(inputDataStr string, doctx *contracts.DocMsgEthereumTx) error {
+func (d SyncDdcTask) parseContractsInput(inputDataStr string, doctx *contracts.DocMsgEthereumTx) error {
 	ddcMethodId := inputDataStr[:8]
-	methodMap, err := contracts.GetDDCSupportMethod()
+	abiServe, ok := d.contractABIsMap[doctx.ContractAddr]
+	if !ok {
+		return constant.SkipErrmsgNoSupportContract
+	}
+	methodMap, err := contracts.GetDDCSupportMethod(abiServe)
 	if err != nil {
 		return err
 	}
 	if val, ok := methodMap[ddcMethodId]; ok {
 		doctx.EvmType = contracts.EvmDdcType
-		doctx.DdcType = val.Contracts
-		doctx.Method = val.Method.Name
+		doctx.DdcType = d.contractTypeNamesMap[doctx.ContractAddr]
+		doctx.Method = val.Name
 		inputData, err := hex.DecodeString(inputDataStr[8:])
 		if err != nil {
 			return err
 		}
 
-		inputs, err := val.Method.Inputs.Unpack(inputData)
+		inputs, err := val.Inputs.Unpack(inputData)
 		if err != nil {
 			return err
 		}
@@ -162,9 +190,10 @@ func (d SyncDdcTask) handleOneMsg(msg repository.TxMsg, tx *repository.Tx) ([]re
 	if err := json.Unmarshal([]byte(msgEtheumTx.Data), &txData); err != nil {
 		return ddcsInfo, evmDatas, err
 	}
+	msgEtheumTx.ContractAddr = txData.To
 
 	inputDataStr := hex.EncodeToString(common.CopyBytes(txData.Data))
-	if err := parseContractsInput(inputDataStr, &msgEtheumTx); err != nil {
+	if err := d.parseContractsInput(inputDataStr, &msgEtheumTx); err != nil {
 		return ddcsInfo, evmDatas, err
 	}
 
@@ -175,7 +204,6 @@ func (d SyncDdcTask) handleOneMsg(msg repository.TxMsg, tx *repository.Tx) ([]re
 		msgEtheumTx.Signer = tx.Signers[0]
 	}
 
-	msgEtheumTx.ContractAddr = txData.To
 	evmData := repository.EvmData{
 		EvmTxHash:       msgEtheumTx.Hash,
 		EvmMethod:       msgEtheumTx.Method,
@@ -253,16 +281,12 @@ func (d SyncDdcTask) handleOneMsg(msg repository.TxMsg, tx *repository.Tx) ([]re
 
 				break
 			case contracts.EditDdc:
-				name, err := contracts.GetDdcName(&msgEtheumTx)
-				if err != nil {
-					logger.Warn("failed to get ddcName " + err.Error())
-				}
 				symbol, err := contracts.GetDdcSymbol(&msgEtheumTx)
 				if err != nil {
 					logger.Warn("failed to get ddcSymbol " + err.Error())
 				}
-				if name != "" || symbol != "" {
-					if err := d.syncDdcModel.UpdateNameAndSymbol(msgEtheumTx.ContractAddr, int64(ddcId), name, symbol); err != nil {
+				if ddcName != "" || symbol != "" {
+					if err := d.syncDdcModel.UpdateNameAndSymbol(msgEtheumTx.ContractAddr, int64(ddcId), ddcName, symbol); err != nil {
 						return ddcsInfo, evmDatas, err
 					}
 				}
@@ -300,15 +324,9 @@ func (d SyncDdcTask) handleDdcTx(tx *repository.Tx) (*repository.ExSyncTxEvm, er
 		}
 		ddcinfos, evmdatas, err := d.handleOneMsg(msg, tx)
 		if err != nil {
-			if err == constant.SkipErrmsgABIMethodNoFound {
-				logger.Warn("skip tx msg for " + err.Error() + fmt.Sprint(" height: ", tx.Height, " txHash: ", tx.TxHash))
-				continue
-			}
-			if err == constant.SkipErrmsgABITypeNoFound {
-				logger.Warn("skip tx msg for " + err.Error() + fmt.Sprint(" height: ", tx.Height, " txHash: ", tx.TxHash))
-				continue
-			}
-			if err == constant.SkipErrmsgNoSupport {
+			// skip msg when no support
+			if err == constant.SkipErrmsgABIMethodNoFound || err == constant.SkipErrmsgABITypeNoFound ||
+				err == constant.SkipErrmsgNoSupport || err == constant.SkipErrmsgNoSupportContract {
 				logger.Warn("skip tx msg for " + err.Error() + fmt.Sprint(" height: ", tx.Height, " txHash: ", tx.TxHash))
 				continue
 			}

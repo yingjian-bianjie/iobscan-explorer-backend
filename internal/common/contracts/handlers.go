@@ -1,9 +1,19 @@
 package contracts
 
 import (
+	"encoding/hex"
 	"github.com/bianjieai/iobscan-explorer-backend/internal/common/constant"
 	ddc_sdk "github.com/bianjieai/iobscan-explorer-backend/pkg/libs/ddc-sdk"
+	"github.com/ethereum/go-ethereum/accounts/abi"
 )
+
+func GetDDCSupportMethod(abiServe abi.ABI) (map[string]abi.Method, error) {
+	methodMap := make(map[string]abi.Method)
+	for _, method := range abiServe.Methods {
+		methodMap[hex.EncodeToString(method.ID)] = method
+	}
+	return methodMap, nil
+}
 
 func GetDdcIdsByHash(msgEtheumTx DocMsgEthereumTx) ([]uint64, error) {
 	var (
