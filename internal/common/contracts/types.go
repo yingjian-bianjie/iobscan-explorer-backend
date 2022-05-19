@@ -1,13 +1,9 @@
 package contracts
 
-import (
-	ABI "github.com/ethereum/go-ethereum/accounts/abi"
-)
-
-type MethodData struct {
-	Method    ABI.Method
-	Contracts string
-}
+//type MethodData struct {
+//	Method    ABI.Method
+//	Contracts string
+//}
 
 const (
 	EvmDdcType        = "DDC"
@@ -31,8 +27,8 @@ const (
 	TransferDdc
 	EditDdc
 	SetURI
-	FreezeDdc
-	UnFreezeDdc
+	//FreezeDdc
+	//UnFreezeDdc
 	BurnDdc
 	MintBatchDdc
 	SafeMintDdc
@@ -48,16 +44,22 @@ var (
 		"safeBatchTransferFrom": TransferDdc,
 		"setNameAndSymbol":      EditDdc,
 		"setURI":                SetURI,
-		"freeze":                FreezeDdc,
-		"unFreeze":              UnFreezeDdc,
-		"burn":                  BurnDdc,
-		"burnBatch":             BurnDdc,
+		//"freeze":                FreezeDdc,
+		//"unFreeze":              UnFreezeDdc,
+		"burn":      BurnDdc,
+		"burnBatch": BurnDdc,
 	}
 	DdcType = map[string]int{
 		ContractDDC721:    ContractDDC721Int,
 		ContractDDC1155:   ContractDDC1155Int,
 		ContractAuthority: ContractAuthorityInt,
 		ContractCharge:    ContractChargeInt,
+	}
+	DdcTypeName = map[int]string{
+		ContractDDC721Int:    ContractDDC721,
+		ContractDDC1155Int:   ContractDDC1155,
+		ContractAuthorityInt: ContractAuthority,
+		ContractChargeInt:    ContractCharge,
 	}
 )
 

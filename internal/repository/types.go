@@ -9,6 +9,7 @@ var (
 	docsShouldEnsureIndex = []DocV2{
 		new(ExSyncDdc),
 		new(ExSyncTxEvm),
+		new(ExEvmContractsConfig),
 		new(SyncTask),
 		new(Tx),
 	}

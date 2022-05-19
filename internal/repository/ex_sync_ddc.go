@@ -50,18 +50,6 @@ func (d ExSyncDdc) EnsureIndexes() {
 	ensureIndexes(d.Name(), indexes)
 }
 
-func (d ExSyncDdc) findAll(q map[string]interface{}, sorts []string,
-	skip, limit int) ([]ExSyncDdc, error) {
-
-	var res []ExSyncDdc
-
-	fn := func(c *mgo.Collection) error {
-		return c.Find(q).Sort(sorts...).Skip(skip).Limit(limit).All(&res)
-	}
-
-	return res, ExecCollection(d.Name(), fn)
-}
-
 func (d ExSyncDdc) findOne(q map[string]interface{}, sorts []string) (ExSyncDdc, error) {
 	var res ExSyncDdc
 	fn := func(c *mgo.Collection) error {
