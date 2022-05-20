@@ -214,7 +214,6 @@ func (d SyncDdcTask) handleOneMsg(msg repository.TxMsg, tx *repository.Tx) ([]re
 	}
 	evmDatas = append(evmDatas, evmData)
 
-	//todo ddcIds may be no found for burned ddc/Nft
 	ddcIds, err := contracts.GetDdcIdsByHash(msgEtheumTx)
 	if err != nil {
 		return ddcsInfo, evmDatas, err
@@ -223,7 +222,6 @@ func (d SyncDdcTask) handleOneMsg(msg repository.TxMsg, tx *repository.Tx) ([]re
 	//opts handle
 	ddcOpt, exist := contracts.DdcMethod[msgEtheumTx.Method]
 	if !exist {
-		//todo
 		logger.Warn("no implement handle ddcMethod: " + msgEtheumTx.Method)
 		return ddcsInfo, evmDatas, constant.SkipErrmsgNoSupport
 	}
@@ -247,12 +245,10 @@ func (d SyncDdcTask) handleOneMsg(msg repository.TxMsg, tx *repository.Tx) ([]re
 			case contracts.TransferDdc:
 				if len(msgEtheumTx.Inputs) > 2 {
 					// 0:from 1:to 2:ddcId or ddcIds 3:amount
-					toAddr, err := ddc_sdk.Client().HexToBech32(msgEtheumTx.Inputs[1])
-					if err != nil {
-						logger.Warn("failed to call HexToBech32 for ddc_sdk_client "+err.Error(),
-							logger.String("toAddr", toAddr))
+					if msgEtheumTx.Inputs[1] != "" {
+						toAddr, _ := ddc_sdk.Client().HexToBech32(msgEtheumTx.Inputs[1])
+						ddcInfo.Recipient = toAddr
 					}
-					ddcInfo.Recipient = toAddr
 				}
 				if ddcInfo.Recipient != "" {
 					if err := d.syncDdcModel.UpdateOwnerOrUri(msgEtheumTx.ContractAddr, int64(ddcId), ddcInfo.Recipient, ""); err != nil {
@@ -262,13 +258,25 @@ func (d SyncDdcTask) handleOneMsg(msg repository.TxMsg, tx *repository.Tx) ([]re
 				break
 			case contracts.MintDdc, contracts.SafeMintDdc, contracts.MintBatchDdc:
 				if len(msgEtheumTx.Inputs) > 1 {
-					// 0:to 1:amounts
-					toAddr, err := ddc_sdk.Client().HexToBech32(msgEtheumTx.Inputs[0])
-					if err != nil {
-						logger.Warn("failed to call HexToBech32 for ddc_sdk_client "+err.Error(),
-							logger.String("toAddr", toAddr))
+					//ddc721 mint,safeMint 0:to 1:ddcURI_
+					//ddc1155 safeMint 0:to 1:amount 2:_ddcURI
+					//ddc1155 safeMintBatch 0:to 1:amounts 2:_ddcURIs
+					if msgEtheumTx.Inputs[0] != "" {
+						toAddr, _ := ddc_sdk.Client().HexToBech32(msgEtheumTx.Inputs[0])
+						ddcInfo.Recipient = toAddr
 					}
-					ddcInfo.Recipient = toAddr
+
+					switch msgEtheumTx.DdcType {
+					case contracts.ContractDDC721:
+						if len(msgEtheumTx.Inputs) >= 2 {
+							ddcInfo.DdcUri = msgEtheumTx.Inputs[1]
+						}
+					case contracts.ContractDDC1155:
+						if len(msgEtheumTx.Inputs) >= 3 {
+							ddcInfo.DdcUri = msgEtheumTx.Inputs[2]
+						}
+
+					}
 				}
 
 				ddcid := int64(ddcId)
@@ -276,11 +284,12 @@ func (d SyncDdcTask) handleOneMsg(msg repository.TxMsg, tx *repository.Tx) ([]re
 				ddcOwner, _ := contracts.GetDdcOwner(ddcid, &msgEtheumTx)
 				ddcDoc.Owner, _ = ddc_sdk.Client().HexToBech32(ddcOwner)
 				ddcDoc.DdcSymbl, _ = contracts.GetDdcSymbol(&msgEtheumTx)
-				//if err != nil {
-				//	//return err when failed to get ddc data
-				//	return ddcsInfo, evmDatas, err
-				//}
 				ddcDoc.DdcData = util.MarshalJsonIgnoreErr(evmData.EvmInputs)
+				//handle burn ddc tx owner
+				if ddcOwner == "" {
+					ddcDoc.Owner = ddcInfo.Recipient
+					ddcDoc.DdcUri = ddcInfo.DdcUri
+				}
 
 				if tx.Status == repository.TxStatusSuccess {
 					if err := d.syncDdcModel.Save(*ddcDoc); err != nil && err != constant.ErrDbExist {
@@ -321,7 +330,6 @@ func (d SyncDdcTask) handleOneMsg(msg repository.TxMsg, tx *repository.Tx) ([]re
 			//	//}
 			//	break
 			default:
-				//todo
 				return ddcsInfo, evmDatas, constant.SkipErrmsgNoSupport
 			}
 		}
