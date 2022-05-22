@@ -150,8 +150,6 @@ func (d *SyncDdcTask) parseContractsInput(inputDataStr string, doctx *contracts.
 		return err
 	}
 	if val, ok := methodMap[ddcMethodId]; ok {
-		doctx.EvmType = contracts.EvmDdcType
-		doctx.DdcType = d.contractTypeNamesMap[doctx.ContractAddr]
 		doctx.Method = val.Name
 		inputData, err := hex.DecodeString(inputDataStr[8:])
 		if err != nil {
@@ -192,6 +190,8 @@ func (d *SyncDdcTask) handleOneMsg(msg repository.TxMsg, tx *repository.Tx) ([]r
 		return ddcsInfo, evmDatas, err
 	}
 	msgEtheumTx.ContractAddr = txData.To
+	msgEtheumTx.DdcType = d.contractTypeNamesMap[msgEtheumTx.ContractAddr]
+	msgEtheumTx.EvmType = contracts.EvmDdcType
 
 	inputDataStr := hex.EncodeToString(common.CopyBytes(txData.Data))
 	if err := d.parseContractsInput(inputDataStr, &msgEtheumTx); err != nil {
