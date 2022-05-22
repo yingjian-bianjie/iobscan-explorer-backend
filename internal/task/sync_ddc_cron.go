@@ -193,7 +193,7 @@ func (d SyncDdcTask) handleOneMsg(msg repository.TxMsg, tx *repository.Tx) ([]re
 	msgEtheumTx.ContractAddr = txData.To
 
 	inputDataStr := hex.EncodeToString(common.CopyBytes(txData.Data))
-	if err := d.parseContractsInput(inputDataStr, &msgEtheumTx); err != nil {
+	if err := d.parseContractsInput(inputDataStr, &msgEtheumTx); err != nil && err != constant.SkipErrmsgNoSupportContract {
 		return ddcsInfo, evmDatas, err
 	}
 
@@ -245,6 +245,7 @@ func (d SyncDdcTask) handleOneMsg(msg repository.TxMsg, tx *repository.Tx) ([]re
 			case contracts.TransferDdc:
 				if len(msgEtheumTx.Inputs) > 2 {
 					// 0:from 1:to 2:ddcId or ddcIds 3:amount
+					msgEtheumTx.Inputs[1] = strings.ReplaceAll(msgEtheumTx.Inputs[1], "\"", "")
 					if msgEtheumTx.Inputs[1] != "" {
 						toAddr, _ := ddc_sdk.Client().HexToBech32(msgEtheumTx.Inputs[1])
 						ddcInfo.Recipient = toAddr
@@ -261,6 +262,7 @@ func (d SyncDdcTask) handleOneMsg(msg repository.TxMsg, tx *repository.Tx) ([]re
 					//ddc721 mint,safeMint 0:to 1:ddcURI_
 					//ddc1155 safeMint 0:to 1:amount 2:_ddcURI
 					//ddc1155 safeMintBatch 0:to 1:amounts 2:_ddcURIs
+					msgEtheumTx.Inputs[0] = strings.ReplaceAll(msgEtheumTx.Inputs[0], "\"", "")
 					if msgEtheumTx.Inputs[0] != "" {
 						toAddr, _ := ddc_sdk.Client().HexToBech32(msgEtheumTx.Inputs[0])
 						ddcInfo.Recipient = toAddr
@@ -269,10 +271,12 @@ func (d SyncDdcTask) handleOneMsg(msg repository.TxMsg, tx *repository.Tx) ([]re
 					switch msgEtheumTx.DdcType {
 					case contracts.ContractDDC721:
 						if len(msgEtheumTx.Inputs) >= 2 {
+							msgEtheumTx.Inputs[1] = strings.ReplaceAll(msgEtheumTx.Inputs[1], "\"", "")
 							ddcInfo.DdcUri = msgEtheumTx.Inputs[1]
 						}
 					case contracts.ContractDDC1155:
 						if len(msgEtheumTx.Inputs) >= 3 {
+							msgEtheumTx.Inputs[2] = strings.ReplaceAll(msgEtheumTx.Inputs[2], "\"", "")
 							ddcInfo.DdcUri = msgEtheumTx.Inputs[2]
 						}
 
@@ -302,6 +306,8 @@ func (d SyncDdcTask) handleOneMsg(msg repository.TxMsg, tx *repository.Tx) ([]re
 			case contracts.EditDdc:
 				if len(msgEtheumTx.Inputs) > 1 {
 					// 0:name 1:symbol
+					msgEtheumTx.Inputs[0] = strings.ReplaceAll(msgEtheumTx.Inputs[0], "\"", "")
+					msgEtheumTx.Inputs[1] = strings.ReplaceAll(msgEtheumTx.Inputs[1], "\"", "")
 					ddcInfo.DdcName = msgEtheumTx.Inputs[0]
 					ddcInfo.DdcSymbol = msgEtheumTx.Inputs[1]
 				}
@@ -314,6 +320,7 @@ func (d SyncDdcTask) handleOneMsg(msg repository.TxMsg, tx *repository.Tx) ([]re
 			case contracts.SetURI:
 				if len(msgEtheumTx.Inputs) > 1 {
 					// 0:ddcId 1:ddcUri
+					msgEtheumTx.Inputs[1] = strings.ReplaceAll(msgEtheumTx.Inputs[1], "\"", "")
 					ddcInfo.DdcUri = msgEtheumTx.Inputs[1]
 				}
 				if ddcInfo.DdcUri != "" {
