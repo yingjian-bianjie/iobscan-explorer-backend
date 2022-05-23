@@ -4,6 +4,7 @@ import (
 	"encoding/hex"
 	"encoding/json"
 	"fmt"
+	"github.com/bianjieai/iobscan-explorer-backend/monitor"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"gopkg.in/mgo.v2/bson"
 	"gopkg.in/mgo.v2/txn"
@@ -98,9 +99,11 @@ func (d *SyncDdcTask) Start() {
 				if err != mgo.ErrNotFound && err != constant.ErrDbExist {
 					logger.Error("failed to handle Txs " + err.Error())
 				}
+				monitor.SetCronTaskStatusMetricValue(d.Name(), -1)
 				return
 			}
 		}
+		monitor.SetCronTaskStatusMetricValue(d.Name(), 1)
 	}
 
 	util.RunTimer(d.Cron(), util.Sec, func() {
