@@ -3,7 +3,7 @@ module github.com/bianjieai/iobscan-explorer-backend
 go 1.16
 
 require (
-	github.com/bianjieai/ddc-sdk-go/ddc-sdk-platform-go v0.0.0-20220429103105-e2cde50aa227
+	github.com/bianjieai/ddc-sdk-go/ddc-sdk-platform-go v0.0.0-20220520032907-98d92fb6f6d1
 	github.com/ethereum/go-ethereum v1.10.16
 	github.com/spf13/cobra v1.2.1
 	github.com/spf13/viper v1.9.0

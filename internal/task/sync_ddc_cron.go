@@ -3,7 +3,6 @@ package task
 import (
 	"encoding/hex"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"gopkg.in/mgo.v2/bson"
@@ -30,19 +29,18 @@ type SyncDdcTask struct {
 	contractTypeNamesMap map[string]string
 }
 
-func (d SyncDdcTask) Name() string {
+func (d *SyncDdcTask) Name() string {
 	return constant.SyncDdcTaskName
 }
 
-func (d SyncDdcTask) Cron() int {
+func (d *SyncDdcTask) Cron() int {
 	return constant.CronTimeSyncDdcTask
 }
 
-func (d SyncDdcTask) DoTask(fn func(string) chan bool) error {
+func (d *SyncDdcTask) DoTask(fn func(string) chan bool) error {
 	return nil
 }
-
-func (d SyncDdcTask) Start() {
+func (d *SyncDdcTask) loadEvmConfig() {
 	evmContractCfgData, err := d.evmCfgModel.FindAll()
 	if err != nil {
 		logger.Fatal("failed to get data from " + d.evmCfgModel.Name() + err.Error())
@@ -61,6 +59,9 @@ func (d SyncDdcTask) Start() {
 		d.contractTypeNamesMap[val.Address] = contracts.DdcTypeName[val.Type]
 	}
 	logger.Info("load contract config  data success.")
+}
+func (d *SyncDdcTask) Start() {
+	d.loadEvmConfig()
 
 	handleDdc := func() {
 		//logger.Debug("sync ddc cron task start...")
@@ -107,7 +108,7 @@ func (d SyncDdcTask) Start() {
 	})
 
 }
-func (d SyncDdcTask) handleTxs(txs []repository.Tx) error {
+func (d *SyncDdcTask) handleTxs(txs []repository.Tx) error {
 	evmTxs := make([]*repository.ExSyncTxEvm, 0, len(txs))
 	var latestTxHeight int64
 	for _, tx := range txs {
@@ -138,7 +139,7 @@ func (d SyncDdcTask) handleTxs(txs []repository.Tx) error {
 
 	return nil
 }
-func (d SyncDdcTask) parseContractsInput(inputDataStr string, doctx *contracts.DocMsgEthereumTx) error {
+func (d *SyncDdcTask) parseContractsInput(inputDataStr string, doctx *contracts.DocMsgEthereumTx) error {
 	ddcMethodId := inputDataStr[:8]
 	abiServe, ok := d.contractABIsMap[doctx.ContractAddr]
 	if !ok {
@@ -149,8 +150,6 @@ func (d SyncDdcTask) parseContractsInput(inputDataStr string, doctx *contracts.D
 		return err
 	}
 	if val, ok := methodMap[ddcMethodId]; ok {
-		doctx.EvmType = contracts.EvmDdcType
-		doctx.DdcType = d.contractTypeNamesMap[doctx.ContractAddr]
 		doctx.Method = val.Name
 		inputData, err := hex.DecodeString(inputDataStr[8:])
 		if err != nil {
@@ -172,7 +171,7 @@ func (d SyncDdcTask) parseContractsInput(inputDataStr string, doctx *contracts.D
 	return constant.SkipErrmsgABIMethodNoFound
 }
 
-func (d SyncDdcTask) handleOneMsg(msg repository.TxMsg, tx *repository.Tx) ([]repository.DdcInfo, []repository.EvmData, error) {
+func (d *SyncDdcTask) handleOneMsg(msg repository.TxMsg, tx *repository.Tx) ([]repository.DdcInfo, []repository.EvmData, error) {
 
 	var ddcsInfo []repository.DdcInfo
 	var evmDatas []repository.EvmData
@@ -191,10 +190,17 @@ func (d SyncDdcTask) handleOneMsg(msg repository.TxMsg, tx *repository.Tx) ([]re
 		return ddcsInfo, evmDatas, err
 	}
 	msgEtheumTx.ContractAddr = txData.To
+	msgEtheumTx.DdcType = d.contractTypeNamesMap[msgEtheumTx.ContractAddr]
+	msgEtheumTx.EvmType = contracts.EvmDdcType
 
 	inputDataStr := hex.EncodeToString(common.CopyBytes(txData.Data))
 	if err := d.parseContractsInput(inputDataStr, &msgEtheumTx); err != nil {
-		return ddcsInfo, evmDatas, err
+		if err != constant.SkipErrmsgNoSupportContract && err != constant.SkipErrmsgABIMethodNoFound {
+			return ddcsInfo, evmDatas, err
+		}
+		// skip msg when no support
+		logger.Warn(err.Error()+fmt.Sprint(" height: ", tx.Height, " txHash: ", tx.TxHash),
+			logger.String("contract_address", txData.To))
 	}
 
 	//save txHeight,txTime,Signer to msgEtheumTx
@@ -214,30 +220,20 @@ func (d SyncDdcTask) handleOneMsg(msg repository.TxMsg, tx *repository.Tx) ([]re
 	}
 	evmDatas = append(evmDatas, evmData)
 
-	//todo ddcIds may be no found for burned ddc/Nft
-	ddcIds, err := contracts.GetDdcIdsByHash(msgEtheumTx)
-	if err != nil {
-		return ddcsInfo, evmDatas, err
-	}
+	ddcIds := contracts.GetDdcIdsByHash(msgEtheumTx)
 
 	//opts handle
-	ddcOpt, exist := contracts.DdcMethod[msgEtheumTx.Method]
-	if !exist {
-		//todo
-		logger.Warn("no support ddcMethod: " + msgEtheumTx.Method)
-		return ddcsInfo, evmDatas, constant.SkipErrmsgNoSupport
-	}
+	ddcOpt, _ := contracts.DdcMethod[msgEtheumTx.Method]
 	for _, ddcId := range ddcIds {
-		ddcName, _ := contracts.GetDdcName(&msgEtheumTx)
-		ddcUri, _ := contracts.GetDdcUri(int64(ddcId), &msgEtheumTx)
+		//save evm tx ddc info
 		ddcInfo := repository.DdcInfo{
-			DdcId:     int64(ddcId),
-			DdcName:   ddcName,
-			DdcType:   msgEtheumTx.DdcType,
-			DdcUri:    ddcUri,
+			DdcId: int64(ddcId),
+			//DdcName:   ddcName,
+			DdcType: msgEtheumTx.DdcType,
+			//DdcUri:    ddcUri,
 			EvmTxHash: msgEtheumTx.Hash,
+			Sender:    msgEtheumTx.Signer,
 		}
-		ddcsInfo = append(ddcsInfo, ddcInfo)
 		if tx.Status == repository.TxStatusSuccess {
 			switch ddcOpt {
 			case contracts.BurnDdc:
@@ -246,31 +242,57 @@ func (d SyncDdcTask) handleOneMsg(msg repository.TxMsg, tx *repository.Tx) ([]re
 				}
 				break
 			case contracts.TransferDdc:
-				ddcOwner, err := contracts.GetDdcOwner(int64(ddcId), &msgEtheumTx)
-				if err != nil {
-					//return err when failed to get ddc data
-					return ddcsInfo, evmDatas, err
+				if len(msgEtheumTx.Inputs) > 2 {
+					// 0:from 1:to 2:ddcId or ddcIds 3:amount
+					msgEtheumTx.Inputs[1] = strings.ReplaceAll(msgEtheumTx.Inputs[1], "\"", "")
+					if msgEtheumTx.Inputs[1] != "" {
+						toAddr, _ := ddc_sdk.Client().HexToBech32(msgEtheumTx.Inputs[1])
+						ddcInfo.Recipient = toAddr
+					}
 				}
-				if ddcOwner != "" {
-					owner, _ := ddc_sdk.Client().HexToBech32(ddcOwner)
-					if err := d.syncDdcModel.UpdateOwnerOrUri(msgEtheumTx.ContractAddr, int64(ddcId), owner, ""); err != nil {
+				if ddcInfo.Recipient != "" {
+					if err := d.syncDdcModel.UpdateOwnerOrUri(msgEtheumTx.ContractAddr, int64(ddcId), ddcInfo.Recipient, ""); err != nil {
 						return ddcsInfo, evmDatas, err
 					}
 				}
 				break
 			case contracts.MintDdc, contracts.SafeMintDdc, contracts.MintBatchDdc:
+				if len(msgEtheumTx.Inputs) > 1 {
+					//ddc721 mint,safeMint 0:to 1:ddcURI_
+					//ddc1155 safeMint 0:to 1:amount 2:_ddcURI
+					//ddc1155 safeMintBatch 0:to 1:amounts 2:_ddcURIs
+					msgEtheumTx.Inputs[0] = strings.ReplaceAll(msgEtheumTx.Inputs[0], "\"", "")
+					if msgEtheumTx.Inputs[0] != "" {
+						toAddr, _ := ddc_sdk.Client().HexToBech32(msgEtheumTx.Inputs[0])
+						ddcInfo.Recipient = toAddr
+					}
+
+					switch msgEtheumTx.DdcType {
+					case contracts.ContractDDC721:
+						if len(msgEtheumTx.Inputs) >= 2 {
+							msgEtheumTx.Inputs[1] = strings.ReplaceAll(msgEtheumTx.Inputs[1], "\"", "")
+							ddcInfo.DdcUri = msgEtheumTx.Inputs[1]
+						}
+					case contracts.ContractDDC1155:
+						if len(msgEtheumTx.Inputs) >= 3 {
+							msgEtheumTx.Inputs[2] = strings.ReplaceAll(msgEtheumTx.Inputs[2], "\"", "")
+							ddcInfo.DdcUri = msgEtheumTx.Inputs[2]
+						}
+
+					}
+				}
+
 				ddcid := int64(ddcId)
 				ddcDoc := d.createExSyncDdcByDdcId(ddcid, &msgEtheumTx)
-				ddcDoc.DdcUri = ddcUri
 				ddcOwner, _ := contracts.GetDdcOwner(ddcid, &msgEtheumTx)
 				ddcDoc.Owner, _ = ddc_sdk.Client().HexToBech32(ddcOwner)
 				ddcDoc.DdcSymbl, _ = contracts.GetDdcSymbol(&msgEtheumTx)
-				ddcDoc.DdcName = ddcName
-				//if err != nil {
-				//	//return err when failed to get ddc data
-				//	return ddcsInfo, evmDatas, err
-				//}
 				ddcDoc.DdcData = util.MarshalJsonIgnoreErr(evmData.EvmInputs)
+				//handle burn ddc tx owner
+				if ddcOwner == "" {
+					ddcDoc.Owner = ddcInfo.Recipient
+					ddcDoc.DdcUri = ddcInfo.DdcUri
+				}
 
 				if tx.Status == repository.TxStatusSuccess {
 					if err := d.syncDdcModel.Save(*ddcDoc); err != nil && err != constant.ErrDbExist {
@@ -281,41 +303,46 @@ func (d SyncDdcTask) handleOneMsg(msg repository.TxMsg, tx *repository.Tx) ([]re
 
 				break
 			case contracts.EditDdc:
-				symbol, err := contracts.GetDdcSymbol(&msgEtheumTx)
-				if err != nil {
-					logger.Warn("failed to get ddcSymbol " + err.Error())
+				if len(msgEtheumTx.Inputs) > 1 {
+					// 0:name 1:symbol
+					msgEtheumTx.Inputs[0] = strings.ReplaceAll(msgEtheumTx.Inputs[0], "\"", "")
+					msgEtheumTx.Inputs[1] = strings.ReplaceAll(msgEtheumTx.Inputs[1], "\"", "")
+					ddcInfo.DdcName = msgEtheumTx.Inputs[0]
+					ddcInfo.DdcSymbol = msgEtheumTx.Inputs[1]
 				}
-				if ddcName != "" || symbol != "" {
-					if err := d.syncDdcModel.UpdateNameAndSymbol(msgEtheumTx.ContractAddr, int64(ddcId), ddcName, symbol); err != nil {
+				if ddcInfo.DdcName != "" || ddcInfo.DdcSymbol != "" {
+					if err := d.syncDdcModel.UpdateNameAndSymbol(msgEtheumTx.ContractAddr, int64(ddcId), ddcInfo.DdcName, ddcInfo.DdcSymbol); err != nil {
 						return ddcsInfo, evmDatas, err
 					}
 				}
 				break
 			case contracts.SetURI:
-				if err := d.syncDdcModel.UpdateOwnerOrUri(msgEtheumTx.ContractAddr, int64(ddcId), "", ddcUri); err != nil {
-					return ddcsInfo, evmDatas, err
+				if len(msgEtheumTx.Inputs) > 1 {
+					// 0:ddcId 1:ddcUri
+					msgEtheumTx.Inputs[1] = strings.ReplaceAll(msgEtheumTx.Inputs[1], "\"", "")
+					ddcInfo.DdcUri = msgEtheumTx.Inputs[1]
+				}
+				if ddcInfo.DdcUri != "" {
+					if err := d.syncDdcModel.UpdateOwnerOrUri(msgEtheumTx.ContractAddr, int64(ddcId), "", ddcInfo.DdcUri); err != nil {
+						return ddcsInfo, evmDatas, err
+					}
 				}
 				break
-			//case contracts.FreezeDdc, contracts.UnFreezeDdc:
-			//	//err := d.syncDdcModel.Update(contractAddr, ddcId,
-			//	//	bson.M{"is_freeze": ddcOpt == contracts.FreezeDdc})
-			//	//if err != nil {
-			//	//	return nil, err
-			//	//}
-			//	break
-			default:
-				//todo
-				return ddcsInfo, evmDatas, constant.SkipErrmsgNoSupport
+				//case contracts.FreezeDdc, contracts.UnFreezeDdc:
+				//	//err := d.syncDdcModel.Update(contractAddr, ddcId,
+				//	//	bson.M{"is_freeze": ddcOpt == contracts.FreezeDdc})
+				//	//if err != nil {
+				//	//	return nil, err
+				//	//}
+				//	break
 			}
 		}
+		ddcsInfo = append(ddcsInfo, ddcInfo)
 	}
 	return ddcsInfo, evmDatas, nil
 }
 
-func (d SyncDdcTask) handleDdcTx(tx *repository.Tx) (*repository.ExSyncTxEvm, error) {
-	if len(tx.DocTxMsgs) == 0 {
-		return nil, errors.New("empty msg")
-	}
+func (d *SyncDdcTask) handleDdcTx(tx *repository.Tx) (*repository.ExSyncTxEvm, error) {
 	var ddcsInfo []repository.DdcInfo
 	var evmDatas []repository.EvmData
 	for _, msg := range tx.DocTxMsgs {
@@ -324,12 +351,6 @@ func (d SyncDdcTask) handleDdcTx(tx *repository.Tx) (*repository.ExSyncTxEvm, er
 		}
 		ddcinfos, evmdatas, err := d.handleOneMsg(msg, tx)
 		if err != nil {
-			// skip msg when no support
-			if err == constant.SkipErrmsgABIMethodNoFound || err == constant.SkipErrmsgABITypeNoFound ||
-				err == constant.SkipErrmsgNoSupport || err == constant.SkipErrmsgNoSupportContract {
-				logger.Warn("skip tx msg for " + err.Error() + fmt.Sprint(" height: ", tx.Height, " txHash: ", tx.TxHash))
-				continue
-			}
 			return nil, err
 		}
 		ddcsInfo = append(ddcsInfo, ddcinfos...)
@@ -351,25 +372,27 @@ func (d SyncDdcTask) handleDdcTx(tx *repository.Tx) (*repository.ExSyncTxEvm, er
 	return txInfo, nil
 }
 
-func (d SyncDdcTask) createExSyncDdcByDdcId(ddcId int64, msgEtheumTx *contracts.DocMsgEthereumTx) *repository.ExSyncDdc {
+func (d *SyncDdcTask) createExSyncDdcByDdcId(ddcId int64, msgEtheumTx *contracts.DocMsgEthereumTx) *repository.ExSyncDdc {
+	ddcName, _ := contracts.GetDdcName(msgEtheumTx)
+	ddcUri, _ := contracts.GetDdcUri(ddcId, msgEtheumTx)
 	data := &repository.ExSyncDdc{
 		DdcId:   ddcId,
 		DdcType: contracts.DdcType[msgEtheumTx.DdcType],
-		//DdcName:         ddcName,
+		DdcName: ddcName,
 		//DdcSymbl:        ddcSymbol,
 		ContractAddress: msgEtheumTx.ContractAddr,
 		//DdcData:         ddcData,
 		Creator: msgEtheumTx.Signer,
 		//Owner:           ddcOwner,
 		//Amount:          amount,
-		//DdcUri:         ddcUri,
+		DdcUri:         ddcUri,
 		LatestTxHeight: msgEtheumTx.TxHeight,
 		LatestTxTime:   msgEtheumTx.TxTime,
 	}
 	return data
 }
 
-func (d SyncDdcTask) getDdcTxsWithScope(latestHeight, maxHeight int64) []repository.Tx {
+func (d *SyncDdcTask) getDdcTxsWithScope(latestHeight, maxHeight int64) []repository.Tx {
 	txs, err := d.txModel.FindDdcTx(latestHeight)
 	if err != nil {
 		logger.Error(err.Error(), logger.String("funcName", "getTxsWithScope"))
@@ -383,14 +406,14 @@ func (d SyncDdcTask) getDdcTxsWithScope(latestHeight, maxHeight int64) []reposit
 	return txs
 }
 
-func (d SyncDdcTask) deleteDdcs(ddcId int64, contractAddr string) error {
+func (d *SyncDdcTask) deleteDdcs(ddcId int64, contractAddr string) error {
 	if err := d.syncDdcModel.DeleteDdc(contractAddr, ddcId); err != nil && err != mgo.ErrNotFound {
 		return err
 	}
 	return nil
 }
 
-func (d SyncDdcTask) bitchSaveWithTxn(evmTxs []*repository.ExSyncTxEvm) error {
+func (d *SyncDdcTask) bitchSaveWithTxn(evmTxs []*repository.ExSyncTxEvm) error {
 
 	insertOps := make([]txn.Op, 0, repository.GetSrvConf().InsertBatchLimit)
 	for _, val := range evmTxs {
@@ -413,7 +436,7 @@ func (d SyncDdcTask) bitchSaveWithTxn(evmTxs []*repository.ExSyncTxEvm) error {
 	return nil
 }
 
-func (d SyncDdcTask) getMaxHeight() (int64, error) {
+func (d *SyncDdcTask) getMaxHeight() (int64, error) {
 	latestTx, err := d.txModel.FindLatestTx()
 	if err != nil && err != mgo.ErrNotFound {
 		return 0, err
@@ -421,7 +444,7 @@ func (d SyncDdcTask) getMaxHeight() (int64, error) {
 	return latestTx.Height, nil
 }
 
-func (d SyncDdcTask) getDdcLatestHeight() (int64, error) {
+func (d *SyncDdcTask) getDdcLatestHeight() (int64, error) {
 	ddc, err := d.syncDdcModel.DdcLatest()
 	if err != nil && err != mgo.ErrNotFound {
 		return 0, err

@@ -69,8 +69,10 @@ func TestSyncDdcTask_Start(t *testing.T) {
 }
 
 func TestSyncDdcTask_handleDdcTx(t *testing.T) {
-	txs := new(SyncDdcTask).getDdcTxsWithScope(819487, 819590)
-	data, err := new(SyncDdcTask).handleDdcTx(&txs[0])
+	d := new(SyncDdcTask)
+	d.loadEvmConfig()
+	txs := d.getDdcTxsWithScope(697326, 698600)
+	data, err := d.handleDdcTx(&txs[0])
 	if err != nil {
 		t.Fatal(err.Error())
 	}

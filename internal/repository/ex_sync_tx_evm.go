@@ -35,9 +35,12 @@ type (
 	DdcInfo struct {
 		DdcId     int64  `bson:"ddc_id"`
 		DdcName   string `bson:"ddc_name"`
+		DdcSymbol string `bson:"ddc_symbol"`
 		DdcType   string `bson:"ddc_type"`
 		DdcUri    string `bson:"ddc_uri"`
 		EvmTxHash string `bson:"evm_tx_hash"`
+		Sender    string `bson:"sender"`
+		Recipient string `bson:"recipient"`
 	}
 )
 
