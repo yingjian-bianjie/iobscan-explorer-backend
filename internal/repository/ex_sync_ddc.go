@@ -13,7 +13,7 @@ const (
 type ExSyncDdc struct {
 	DdcId           int64  `bson:"ddc_id"`
 	DdcType         int    `bson:"ddc_type"`
-	DdcSymbl        string `bson:"ddc_symbl"`
+	DdcSymbol       string `bson:"ddc_symbol"`
 	DdcName         string `bson:"ddc_name"`
 	ContractAddress string `bson:"contract_address"`
 	DdcUri          string `bson:"ddc_uri"`
@@ -78,6 +78,22 @@ func (d ExSyncDdc) Save(ddc ExSyncDdc) error {
 func (d ExSyncDdc) DdcLatest() (ExSyncDdc, error) {
 	q := bson.M{}
 	return d.findOne(q, []string{"-latest_tx_height"})
+}
+
+func (d ExSyncDdc) FindDdcsByDdcIds(contractAddr string, ddcIds []uint64) ([]ExSyncDdc, error) {
+	var res []ExSyncDdc
+	q := bson.M{
+		"contract_address": contractAddr,
+		"ddc_id": bson.M{
+			"$in": ddcIds,
+		},
+	}
+	selector := bson.M{"ddc_id": 1, "ddc_name": 1, "ddc_uri": 1, "ddc_symbol": 1}
+	fn := func(c *mgo.Collection) error {
+		return c.Find(q).Select(selector).All(&res)
+	}
+
+	return res, ExecCollection(d.Name(), fn)
 }
 
 func (d ExSyncDdc) UpdateOwnerOrUri(contractAddr string, ddcId int64, owner, uri string) error {

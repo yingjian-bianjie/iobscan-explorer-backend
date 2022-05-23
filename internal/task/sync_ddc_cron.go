@@ -221,6 +221,16 @@ func (d *SyncDdcTask) handleOneMsg(msg repository.TxMsg, tx *repository.Tx) ([]r
 	evmDatas = append(evmDatas, evmData)
 
 	ddcIds := contracts.GetDdcIdsByHash(msgEtheumTx)
+	ddcMap := make(map[int64]repository.ExSyncDdc, len(ddcIds))
+	if len(ddcIds) > 0 {
+		ddcs, err := d.syncDdcModel.FindDdcsByDdcIds(msgEtheumTx.ContractAddr, ddcIds)
+		if err != nil {
+			logger.Warn(err.Error(), logger.String("funcName", "FindDdcsByDdcIds"))
+		}
+		for _, val := range ddcs {
+			ddcMap[val.DdcId] = val
+		}
+	}
 
 	//opts handle
 	ddcOpt, _ := contracts.DdcMethod[msgEtheumTx.Method]
@@ -237,11 +247,21 @@ func (d *SyncDdcTask) handleOneMsg(msg repository.TxMsg, tx *repository.Tx) ([]r
 		if tx.Status == repository.TxStatusSuccess {
 			switch ddcOpt {
 			case contracts.BurnDdc:
+				if dbDdc, ok := ddcMap[int64(ddcId)]; ok {
+					ddcInfo.DdcName = dbDdc.DdcName
+					ddcInfo.DdcUri = dbDdc.DdcUri
+					ddcInfo.DdcSymbol = dbDdc.DdcSymbol
+				}
 				if err := d.deleteDdcs(int64(ddcId), msgEtheumTx.ContractAddr); err != nil {
 					return ddcsInfo, evmDatas, err
 				}
 				break
 			case contracts.TransferDdc:
+				if dbDdc, ok := ddcMap[int64(ddcId)]; ok {
+					ddcInfo.DdcName = dbDdc.DdcName
+					ddcInfo.DdcUri = dbDdc.DdcUri
+					ddcInfo.DdcSymbol = dbDdc.DdcSymbol
+				}
 				if len(msgEtheumTx.Inputs) > 2 {
 					// 0:from 1:to 2:ddcId or ddcIds 3:amount
 					msgEtheumTx.Inputs[1] = strings.ReplaceAll(msgEtheumTx.Inputs[1], "\"", "")
@@ -286,13 +306,17 @@ func (d *SyncDdcTask) handleOneMsg(msg repository.TxMsg, tx *repository.Tx) ([]r
 				ddcDoc := d.createExSyncDdcByDdcId(ddcid, &msgEtheumTx)
 				ddcOwner, _ := contracts.GetDdcOwner(ddcid, &msgEtheumTx)
 				ddcDoc.Owner, _ = ddc_sdk.Client().HexToBech32(ddcOwner)
-				ddcDoc.DdcSymbl, _ = contracts.GetDdcSymbol(&msgEtheumTx)
+				ddcDoc.DdcSymbol, _ = contracts.GetDdcSymbol(&msgEtheumTx)
 				ddcDoc.DdcData = util.MarshalJsonIgnoreErr(evmData.EvmInputs)
 				//handle burn ddc tx owner
 				if ddcOwner == "" {
 					ddcDoc.Owner = ddcInfo.Recipient
+				}
+				if ddcInfo.DdcUri == "" {
 					ddcDoc.DdcUri = ddcInfo.DdcUri
 				}
+				ddcInfo.DdcName = ddcDoc.DdcName
+				ddcInfo.DdcSymbol = ddcDoc.DdcSymbol
 
 				if tx.Status == repository.TxStatusSuccess {
 					if err := d.syncDdcModel.Save(*ddcDoc); err != nil && err != constant.ErrDbExist {
@@ -303,6 +327,9 @@ func (d *SyncDdcTask) handleOneMsg(msg repository.TxMsg, tx *repository.Tx) ([]r
 
 				break
 			case contracts.EditDdc:
+				if dbDdc, ok := ddcMap[int64(ddcId)]; ok {
+					ddcInfo.DdcUri = dbDdc.DdcUri
+				}
 				if len(msgEtheumTx.Inputs) > 1 {
 					// 0:name 1:symbol
 					msgEtheumTx.Inputs[0] = strings.ReplaceAll(msgEtheumTx.Inputs[0], "\"", "")
@@ -317,6 +344,10 @@ func (d *SyncDdcTask) handleOneMsg(msg repository.TxMsg, tx *repository.Tx) ([]r
 				}
 				break
 			case contracts.SetURI:
+				if dbDdc, ok := ddcMap[int64(ddcId)]; ok {
+					ddcInfo.DdcName = dbDdc.DdcName
+					ddcInfo.DdcSymbol = dbDdc.DdcSymbol
+				}
 				if len(msgEtheumTx.Inputs) > 1 {
 					// 0:ddcId 1:ddcUri
 					msgEtheumTx.Inputs[1] = strings.ReplaceAll(msgEtheumTx.Inputs[1], "\"", "")
