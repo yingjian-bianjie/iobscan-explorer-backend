@@ -5,6 +5,7 @@ import (
 	ddc_sdk "github.com/bianjieai/iobscan-explorer-backend/pkg/libs/ddc-sdk"
 	"github.com/bianjieai/iobscan-explorer-backend/pkg/logger"
 	"github.com/ethereum/go-ethereum/accounts/abi"
+	"strings"
 )
 
 func GetDDCSupportMethod(abiServe abi.ABI) (map[string]abi.Method, error) {
@@ -98,4 +99,15 @@ func GetDdcAmount(owner string, ddcId int64, msgEtheumTx *DocMsgEthereumTx) (amo
 
 	}
 	return
+}
+
+func ParseArrStr(arrStr string) []string {
+	start := strings.Index(arrStr, "[")
+	end := strings.Index(arrStr, "]")
+	if start < end && start >= 0 {
+		data := arrStr[start+1 : end]
+		urisArr := strings.Split(data, ",")
+		return urisArr
+	}
+	return nil
 }

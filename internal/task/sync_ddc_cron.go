@@ -234,7 +234,7 @@ func (d *SyncDdcTask) handleOneMsg(msg repository.TxMsg, tx *repository.Tx) ([]r
 
 	//opts handle
 	ddcOpt, _ := contracts.DdcMethod[msgEtheumTx.Method]
-	for _, ddcId := range ddcIds {
+	for i, ddcId := range ddcIds {
 		//save evm tx ddc info
 		ddcInfo := repository.DdcInfo{
 			DdcId: int64(ddcId),
@@ -296,7 +296,14 @@ func (d *SyncDdcTask) handleOneMsg(msg repository.TxMsg, tx *repository.Tx) ([]r
 					case contracts.ContractDDC1155:
 						if len(msgEtheumTx.Inputs) >= 3 {
 							msgEtheumTx.Inputs[2] = strings.ReplaceAll(msgEtheumTx.Inputs[2], "\"", "")
-							ddcInfo.DdcUri = msgEtheumTx.Inputs[2]
+							if ddcOpt == contracts.MintBatchDdc {
+								_ddcURIs := contracts.ParseArrStr(msgEtheumTx.Inputs[2])
+								if len(_ddcURIs) > i {
+									ddcInfo.DdcUri = _ddcURIs[i]
+								}
+							} else {
+								ddcInfo.DdcUri = msgEtheumTx.Inputs[2]
+							}
 						}
 
 					}
