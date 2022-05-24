@@ -349,9 +349,21 @@ func (d *SyncDdcTask) handleOneMsg(msg repository.TxMsg, tx *repository.Tx) ([]r
 					ddcInfo.DdcSymbol = dbDdc.DdcSymbol
 				}
 				if len(msgEtheumTx.Inputs) > 1 {
-					// 0:ddcId 1:ddcUri
-					msgEtheumTx.Inputs[1] = strings.ReplaceAll(msgEtheumTx.Inputs[1], "\"", "")
-					ddcInfo.DdcUri = msgEtheumTx.Inputs[1]
+					switch msgEtheumTx.DdcType {
+					case contracts.ContractDDC721:
+						// 0:ddcId 1:ddcUri
+						if len(msgEtheumTx.Inputs) >= 2 {
+							msgEtheumTx.Inputs[1] = strings.ReplaceAll(msgEtheumTx.Inputs[1], "\"", "")
+							ddcInfo.DdcUri = msgEtheumTx.Inputs[1]
+						}
+					case contracts.ContractDDC1155:
+						// 0:owner 1:ddcId 2:ddcUri
+						if len(msgEtheumTx.Inputs) >= 3 {
+							msgEtheumTx.Inputs[2] = strings.ReplaceAll(msgEtheumTx.Inputs[2], "\"", "")
+							ddcInfo.DdcUri = msgEtheumTx.Inputs[2]
+						}
+
+					}
 				}
 				if ddcInfo.DdcUri != "" {
 					if err := d.syncDdcModel.UpdateOwnerOrUri(msgEtheumTx.ContractAddr, int64(ddcId), "", ddcInfo.DdcUri); err != nil {
