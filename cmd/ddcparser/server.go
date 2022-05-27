@@ -1,6 +1,7 @@
 package main
 
 import (
+	"github.com/bianjieai/iobscan-explorer-backend/monitor"
 	"os"
 	"os/signal"
 	"runtime"
@@ -33,6 +34,9 @@ func start(config *configs.Config) {
 	repository.EnsureIndexes()
 
 	ddc_sdk.InitDDCSDKClient(config.DdcClient)
+
+	go monitor.Start()
+
 	signal.Notify(c, os.Interrupt, os.Kill, syscall.SIGHUP, syscall.SIGINT, syscall.SIGTERM, syscall.SIGQUIT)
 
 	task.Start()
