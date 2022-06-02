@@ -18,6 +18,7 @@ type (
 		IncreHeight       int64  `mapstructure:"incre_height"`
 		InsertBatchLimit  int    `mapstructure:"insert_batch_limit"`
 		MaxOperateTxCount int    `mapstructure:"max_operate_tx_count"`
+		GasPrice          string `mapstructure:"gas_price"`
 	}
 	DdcClientConf struct {
 		GatewayURL       string `mapstructure:"gateway_url"`
