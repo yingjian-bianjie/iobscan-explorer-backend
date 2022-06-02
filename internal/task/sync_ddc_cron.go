@@ -196,6 +196,21 @@ func (d *SyncDdcTask) handleOneMsg(msg repository.TxMsg, tx *repository.Tx) ([]r
 	msgEtheumTx.DdcType = d.contractTypeNamesMap[msgEtheumTx.ContractAddr]
 	msgEtheumTx.EvmType = contracts.EvmDdcType
 
+	//handle tx fee
+	if tx.Fee != nil {
+		gasPrice := repository.GetSrvConf().GasPrice
+		if gasPrice == "" {
+			gasPrice = constant.DefaultGasPrice
+		}
+		for index, amt := range tx.Fee.Amount {
+			actualFee := util.BigFloatMul(gasPrice, tx.Fee.Gas)
+			if actualFee != "" && amt.Amount != actualFee {
+				amt.Amount = actualFee
+				tx.Fee.Amount[index] = amt
+			}
+		}
+	}
+
 	inputDataStr := hex.EncodeToString(common.CopyBytes(txData.Data))
 	if err := d.parseContractsInput(inputDataStr, &msgEtheumTx); err != nil {
 		if err != constant.SkipErrmsgNoSupportContract && err != constant.SkipErrmsgABIMethodNoFound {

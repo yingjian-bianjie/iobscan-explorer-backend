@@ -9,6 +9,7 @@ var (
 )
 
 const (
+	DefaultGasPrice     = "1"
 	SyncDdcTaskName     = "SyncDdcTaskName"
 	CronTimeSyncDdcTask = 30
 )
