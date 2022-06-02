@@ -202,11 +202,12 @@ func (d *SyncDdcTask) handleOneMsg(msg repository.TxMsg, tx *repository.Tx) ([]r
 		if gasPrice == "" {
 			gasPrice = constant.DefaultGasPrice
 		}
-		for index, amt := range tx.Fee.Amount {
+		if len(tx.Fee.Amount) == 1 {
+			amt := tx.Fee.Amount[0]
 			actualFee := util.BigFloatMul(gasPrice, tx.Fee.Gas)
 			if actualFee != "" && amt.Amount != actualFee {
 				amt.Amount = actualFee
-				tx.Fee.Amount[index] = amt
+				tx.Fee.Amount[0] = amt
 			}
 		}
 	}
