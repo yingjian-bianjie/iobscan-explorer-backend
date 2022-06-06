@@ -419,7 +419,7 @@ func (d *SyncDdcTask) handleDdcTx(tx *repository.Tx) (*repository.ExSyncTxEvm, e
 			continue
 		}
 		ddcinfos, evmdatas, err := d.handleOneMsg(msg, tx)
-		if err != nil {
+		if err != nil && err != mgo.ErrNotFound {
 			return nil, err
 		}
 		ddcsInfo = append(ddcsInfo, ddcinfos...)
