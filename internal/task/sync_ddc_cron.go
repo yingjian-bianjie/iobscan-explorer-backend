@@ -174,6 +174,29 @@ func (d *SyncDdcTask) parseContractsInput(inputDataStr string, doctx *contracts.
 	return constant.SkipErrmsgABIMethodNoFound
 }
 
+func (d *SyncDdcTask) handleTxReceipt(evmData *repository.EvmData) {
+	receipt, err := contracts.GetTxReceipt(evmData.EvmTxHash)
+	if err != nil {
+		logger.Warn(err.Error(), logger.String("funcName", "GetTxReceipt"))
+		return
+	}
+	if receipt != nil {
+		// get evm method execute status from evm_tx receipt
+		evmData.TxReceipt.Status = int64(receipt.Status)
+		if receipt.Status == 0 {
+			for _, log := range receipt.Logs {
+				if log != nil {
+					if logData, err := log.MarshalJSON(); err == nil {
+						evmData.TxReceipt.Logs = append(evmData.TxReceipt.Logs, string(logData))
+					} else {
+						logger.Warn(err.Error(), logger.String("funcName", "log.MarshalJSON"))
+					}
+				}
+			}
+		}
+	}
+}
+
 func (d *SyncDdcTask) handleOneMsg(msg repository.TxMsg, tx *repository.Tx) ([]repository.DdcInfo, []repository.EvmData, error) {
 
 	var ddcsInfo []repository.DdcInfo
@@ -195,22 +218,6 @@ func (d *SyncDdcTask) handleOneMsg(msg repository.TxMsg, tx *repository.Tx) ([]r
 	msgEtheumTx.ContractAddr = txData.To
 	msgEtheumTx.DdcType = d.contractTypeNamesMap[msgEtheumTx.ContractAddr]
 	msgEtheumTx.EvmType = contracts.EvmDdcType
-
-	//handle tx fee
-	if tx.Fee != nil {
-		gasPrice := repository.GetSrvConf().GasPrice
-		if gasPrice == "" {
-			gasPrice = constant.DefaultGasPrice
-		}
-		if len(tx.Fee.Amount) == 1 {
-			amt := tx.Fee.Amount[0]
-			actualFee := util.BigFloatMul(gasPrice, tx.Fee.Gas)
-			if actualFee != "" && amt.Amount != actualFee {
-				amt.Amount = actualFee
-				tx.Fee.Amount[0] = amt
-			}
-		}
-	}
 
 	inputDataStr := hex.EncodeToString(common.CopyBytes(txData.Data))
 	if err := d.parseContractsInput(inputDataStr, &msgEtheumTx); err != nil {
@@ -240,6 +247,7 @@ func (d *SyncDdcTask) handleOneMsg(msg repository.TxMsg, tx *repository.Tx) ([]r
 	evmDatas = append(evmDatas, evmData)
 
 	ddcIds := contracts.GetDdcIdsByHash(msgEtheumTx)
+	d.handleTxReceipt(&evmData)
 	ddcMap := make(map[int64]repository.ExSyncDdc, len(ddcIds))
 	if len(ddcIds) > 0 {
 		ddcs, err := d.syncDdcModel.FindDdcsByDdcIds(msgEtheumTx.ContractAddr, ddcIds)

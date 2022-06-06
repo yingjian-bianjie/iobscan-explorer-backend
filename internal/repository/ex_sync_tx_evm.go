@@ -25,12 +25,17 @@ type (
 		UpdateAt   int64     `bson:"update_at"`
 	}
 	EvmData struct {
-		EvmTxHash       string   `bson:"evm_tx_hash"`
-		EvmMethod       string   `bson:"evm_method"`
-		EvmInputs       []string `bson:"evm_inputs"`
-		EvmOutputs      []string `bson:"evm_outputs"`
-		DataType        string   `bson:"data_type"`
-		ContractAddress string   `bson:"contract_address"`
+		EvmTxHash       string    `bson:"evm_tx_hash"`
+		EvmMethod       string    `bson:"evm_method"`
+		TxReceipt       TxReceipt `json:"tx_receipt"`
+		EvmInputs       []string  `bson:"evm_inputs"`
+		EvmOutputs      []string  `bson:"evm_outputs"`
+		DataType        string    `bson:"data_type"`
+		ContractAddress string    `bson:"contract_address"`
+	}
+	TxReceipt struct {
+		Status int64    `bson:"status"`
+		Logs   []string `bson:"logs"`
 	}
 	DdcInfo struct {
 		DdcId     int64  `bson:"ddc_id"`

@@ -5,6 +5,7 @@ import (
 	ddc_sdk "github.com/bianjieai/iobscan-explorer-backend/pkg/libs/ddc-sdk"
 	"github.com/bianjieai/iobscan-explorer-backend/pkg/logger"
 	"github.com/ethereum/go-ethereum/accounts/abi"
+	"github.com/ethereum/go-ethereum/core/types"
 	"strings"
 )
 
@@ -99,6 +100,16 @@ func GetDdcAmount(owner string, ddcId int64, msgEtheumTx *DocMsgEthereumTx) (amo
 
 	}
 	return
+}
+
+// GetTxReceipt
+// @Description: 运营方或平台方根据交易哈希对交易回执信息进行查询。
+// @receiver t
+// @param txHash: 交易哈希
+// @return string： 交易回执
+// @return error
+func GetTxReceipt(txHash string) (*types.Receipt, error) {
+	return ddc_sdk.Client().GetTxReceipt(txHash)
 }
 
 func ParseArrStr(arrStr string) []string {

@@ -2,7 +2,6 @@ package util
 
 import (
 	"encoding/json"
-	"math/big"
 	"time"
 )
 
@@ -96,14 +95,4 @@ func DistinctStringSlice(slice []string) []string {
 	}
 
 	return res
-}
-
-func BigFloatMul(numstr string, num int64) string {
-	n, ok := new(big.Rat).SetString(numstr)
-	if ok {
-		m := new(big.Rat).SetInt64(num)
-		m.Mul(n, m)
-		return m.RatString()
-	}
-	return ""
 }
