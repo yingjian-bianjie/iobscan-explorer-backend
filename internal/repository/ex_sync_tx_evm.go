@@ -27,7 +27,7 @@ type (
 	EvmData struct {
 		EvmTxHash       string    `bson:"evm_tx_hash"`
 		EvmMethod       string    `bson:"evm_method"`
-		TxReceipt       TxReceipt `json:"tx_receipt"`
+		TxReceipt       TxReceipt `bson:"tx_receipt"`
 		EvmInputs       []string  `bson:"evm_inputs"`
 		EvmOutputs      []string  `bson:"evm_outputs"`
 		DataType        string    `bson:"data_type"`
