@@ -1,7 +1,7 @@
 package repository
 
 import (
-	"errors"
+	"github.com/bianjieai/iobscan-explorer-backend/internal/common/constant"
 	"strings"
 	"time"
 
@@ -107,7 +107,7 @@ func Save(h Docs) error {
 		pk := h.PkKvPair()
 		n, _ := c.Find(pk).Count()
 		if n >= 1 {
-			return errors.New("save failed for already exist")
+			return constant.ErrDbExist
 		}
 		return c.Insert(h)
 	}

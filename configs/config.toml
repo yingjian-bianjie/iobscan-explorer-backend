@@ -10,7 +10,6 @@ prometheus_port="9092"
 max_operate_tx_count=100
 insert_batch_limit=100
 incre_height=10
-gas_price="1"
 
 
 [ddc_client]
