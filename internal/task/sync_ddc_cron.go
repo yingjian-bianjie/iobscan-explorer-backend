@@ -221,7 +221,6 @@ func (d *SyncDdcTask) handleOneMsg(msg repository.TxMsg, tx *repository.Tx) ([]r
 		DataType:        msgEtheumTx.EvmType,
 		ContractAddress: msgEtheumTx.ContractAddr,
 	}
-	evmDatas = append(evmDatas, evmData)
 
 	ddcIds := contracts.GetDdcIdsByHash(msgEtheumTx)
 	receipt, err := contracts.GetTxReceipt(evmData.EvmTxHash)
@@ -248,6 +247,7 @@ func (d *SyncDdcTask) handleOneMsg(msg repository.TxMsg, tx *repository.Tx) ([]r
 		}
 		evmData.TxReceipt = txReceipt
 	}
+	evmDatas = append(evmDatas, evmData)
 	ddcMap := make(map[int64]repository.ExSyncDdc, len(ddcIds))
 	if len(ddcIds) > 0 {
 		ddcs, err := d.syncDdcModel.FindDdcsByDdcIds(msgEtheumTx.ContractAddr, ddcIds)
