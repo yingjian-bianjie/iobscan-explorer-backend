@@ -87,7 +87,7 @@ func (d Tx) FindDdcTx(latestHeight int64) ([]Tx, error) {
 		//"status":    TxStatusSuccess,
 		"msgs.type": EthereumTxType,
 		"height": bson.M{
-			"$gt":  latestHeight,
+			"$gte": latestHeight,
 			"$lte": latestHeight + GetSrvConf().IncreHeight,
 		},
 	}

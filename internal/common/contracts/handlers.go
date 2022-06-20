@@ -17,6 +17,24 @@ func GetDDCSupportMethod(abiServe abi.ABI) (map[string]abi.Method, error) {
 	return methodMap, nil
 }
 
+func NeedRetryCallGetDdcIds(msgEtheumTx DocMsgEthereumTx) []uint64 {
+	var (
+		retryMaxTimes = 3
+		ddcIds        []uint64
+	)
+	// retry call if not get ddcIds
+	for len(ddcIds) == 0 {
+		if retryMaxTimes == 0 {
+			logger.Warn("ddc-sdk not get ddcIds when retry call 3 times",
+				logger.String("evm_txHash", msgEtheumTx.Hash))
+			return nil
+		}
+		retryMaxTimes--
+		ddcIds = GetDdcIdsByHash(msgEtheumTx)
+	}
+	return ddcIds
+}
+
 func GetDdcIdsByHash(msgEtheumTx DocMsgEthereumTx) []uint64 {
 	var (
 		ddcIds []uint64
@@ -102,6 +120,25 @@ func GetDdcAmount(owner string, ddcId int64, msgEtheumTx *DocMsgEthereumTx) (amo
 	return
 }
 
+func NeedRetryCallGet(ddcId int64, msgEtheumTx *DocMsgEthereumTx, call func(int64, *DocMsgEthereumTx) (string, error)) (string, error) {
+	var (
+		ret           string
+		err           error
+		retryMaxTimes = 3
+	)
+	// retry call if not get uri or owner
+	for ret == "" {
+		if retryMaxTimes == 0 {
+			logger.Warn("ddc-sdk not get uri or owner when retry call 3 times",
+				logger.String("evm_txHash", msgEtheumTx.Hash))
+			return ret, err
+		}
+		retryMaxTimes--
+		ret, err = call(ddcId, msgEtheumTx)
+	}
+	return ret, err
+}
+
 // GetTxReceipt
 // @Description: 运营方或平台方根据交易哈希对交易回执信息进行查询。
 // @receiver t
@@ -121,4 +158,23 @@ func ParseArrStr(arrStr string) []string {
 		return urisArr
 	}
 	return nil
+}
+
+func NeedRetryCallGetTxReceipt(txHash string) (*types.Receipt, error) {
+	var (
+		receipt       *types.Receipt
+		err           error
+		retryMaxTimes = 3
+	)
+	// retry call if not get receipt
+	for receipt == nil {
+		if retryMaxTimes == 0 {
+			logger.Warn("ddc-sdk not get receipt when retry call 3 times",
+				logger.String("evm_txHash", txHash))
+			return receipt, err
+		}
+		retryMaxTimes--
+		receipt, err = GetTxReceipt(txHash)
+	}
+	return receipt, err
 }
