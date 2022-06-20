@@ -17,6 +17,22 @@ func GetDDCSupportMethod(abiServe abi.ABI) (map[string]abi.Method, error) {
 	return methodMap, nil
 }
 
+func NeedRetryCallGetDdcIds(msgEtheumTx DocMsgEthereumTx) []uint64 {
+	var (
+		retryMaxTimes = 3
+		ddcIds        []uint64
+	)
+	// retry call if not get ddcIds
+	for len(ddcIds) == 0 {
+		if retryMaxTimes == 0 {
+			return nil
+		}
+		retryMaxTimes--
+		ddcIds = GetDdcIdsByHash(msgEtheumTx)
+	}
+	return ddcIds
+}
+
 func GetDdcIdsByHash(msgEtheumTx DocMsgEthereumTx) []uint64 {
 	var (
 		ddcIds []uint64
@@ -121,4 +137,21 @@ func ParseArrStr(arrStr string) []string {
 		return urisArr
 	}
 	return nil
+}
+
+func NeedRetryCallGetTxReceipt(txHash string) (*types.Receipt, error) {
+	var (
+		receipt       *types.Receipt
+		err           error
+		retryMaxTimes = 3
+	)
+	// retry call if not get receipt
+	for receipt == nil {
+		if retryMaxTimes == 0 {
+			return receipt, err
+		}
+		retryMaxTimes--
+		receipt, err = GetTxReceipt(txHash)
+	}
+	return receipt, err
 }

@@ -41,7 +41,7 @@ func NewMetricDdcSdkClientStatus() metrics.Guage {
 
 func sdkClientStatus() {
 	for {
-		t := time.NewTimer(time.Duration(10) * time.Second)
+		t := time.NewTimer(time.Duration(30) * time.Second)
 		select {
 		case <-t.C:
 			getSdkClientStatus()

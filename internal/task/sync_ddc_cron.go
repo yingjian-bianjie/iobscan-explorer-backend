@@ -222,8 +222,10 @@ func (d *SyncDdcTask) handleOneMsg(msg repository.TxMsg, tx *repository.Tx) ([]r
 		ContractAddress: msgEtheumTx.ContractAddr,
 	}
 
-	ddcIds := contracts.GetDdcIdsByHash(msgEtheumTx)
-	receipt, err := contracts.GetTxReceipt(evmData.EvmTxHash)
+	//ddcIds := contracts.GetDdcIdsByHash(msgEtheumTx)
+	//receipt, err := contracts.GetTxReceipt(evmData.EvmTxHash)
+	ddcIds := contracts.NeedRetryCallGetDdcIds(msgEtheumTx)
+	receipt, err := contracts.NeedRetryCallGetTxReceipt(evmData.EvmTxHash)
 	if err != nil {
 		logger.Warn(err.Error(), logger.String("funcName", "GetTxReceipt"))
 	}
