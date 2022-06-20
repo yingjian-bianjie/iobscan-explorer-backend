@@ -118,6 +118,23 @@ func GetDdcAmount(owner string, ddcId int64, msgEtheumTx *DocMsgEthereumTx) (amo
 	return
 }
 
+func NeedRetryCallGet(ddcId int64, msgEtheumTx *DocMsgEthereumTx, call func(int64, *DocMsgEthereumTx) (string, error)) (string, error) {
+	var (
+		ret           string
+		err           error
+		retryMaxTimes = 3
+	)
+	// retry call if not get receipt
+	for ret == "" {
+		if retryMaxTimes == 0 {
+			return ret, err
+		}
+		retryMaxTimes--
+		ret, err = call(ddcId, msgEtheumTx)
+	}
+	return ret, err
+}
+
 // GetTxReceipt
 // @Description: 运营方或平台方根据交易哈希对交易回执信息进行查询。
 // @receiver t

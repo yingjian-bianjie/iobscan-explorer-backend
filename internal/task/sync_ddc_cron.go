@@ -340,7 +340,8 @@ func (d *SyncDdcTask) handleOneMsg(msg repository.TxMsg, tx *repository.Tx) ([]r
 
 				ddcid := int64(ddcId)
 				ddcDoc := d.createExSyncDdcByDdcId(ddcid, &msgEtheumTx)
-				ddcOwner, _ := contracts.GetDdcOwner(ddcid, &msgEtheumTx)
+				ddcOwner, _ := contracts.NeedRetryCallGet(ddcid, &msgEtheumTx, contracts.GetDdcOwner)
+				//ddcOwner, _ := contracts.GetDdcOwner(ddcid, &msgEtheumTx)
 				ddcDoc.Owner, _ = ddc_sdk.Client().HexToBech32(ddcOwner)
 				ddcDoc.DdcSymbol, _ = contracts.GetDdcSymbol(&msgEtheumTx)
 				ddcDoc.DdcData = util.MarshalJsonIgnoreErr(evmData.EvmInputs)
@@ -453,7 +454,8 @@ func (d *SyncDdcTask) handleDdcTx(tx *repository.Tx) (*repository.ExSyncTxEvm, e
 
 func (d *SyncDdcTask) createExSyncDdcByDdcId(ddcId int64, msgEtheumTx *contracts.DocMsgEthereumTx) *repository.ExSyncDdc {
 	ddcName, _ := contracts.GetDdcName(msgEtheumTx)
-	ddcUri, _ := contracts.GetDdcUri(ddcId, msgEtheumTx)
+	//ddcUri, _ := contracts.GetDdcUri(ddcId, msgEtheumTx)
+	ddcUri, _ := contracts.NeedRetryCallGet(ddcId, msgEtheumTx, contracts.GetDdcUri)
 	data := &repository.ExSyncDdc{
 		DdcId:   ddcId,
 		DdcType: contracts.DdcType[msgEtheumTx.DdcType],
