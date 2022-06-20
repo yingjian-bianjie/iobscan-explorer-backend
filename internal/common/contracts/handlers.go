@@ -25,6 +25,8 @@ func NeedRetryCallGetDdcIds(msgEtheumTx DocMsgEthereumTx) []uint64 {
 	// retry call if not get ddcIds
 	for len(ddcIds) == 0 {
 		if retryMaxTimes == 0 {
+			logger.Warn("ddc-sdk not get ddcIds when retry call 3 times",
+				logger.String("evm_txHash", msgEtheumTx.Hash))
 			return nil
 		}
 		retryMaxTimes--
@@ -124,9 +126,11 @@ func NeedRetryCallGet(ddcId int64, msgEtheumTx *DocMsgEthereumTx, call func(int6
 		err           error
 		retryMaxTimes = 3
 	)
-	// retry call if not get receipt
+	// retry call if not get uri or owner
 	for ret == "" {
 		if retryMaxTimes == 0 {
+			logger.Warn("ddc-sdk not get uri or owner when retry call 3 times",
+				logger.String("evm_txHash", msgEtheumTx.Hash))
 			return ret, err
 		}
 		retryMaxTimes--
@@ -165,6 +169,8 @@ func NeedRetryCallGetTxReceipt(txHash string) (*types.Receipt, error) {
 	// retry call if not get receipt
 	for receipt == nil {
 		if retryMaxTimes == 0 {
+			logger.Warn("ddc-sdk not get receipt when retry call 3 times",
+				logger.String("evm_txHash", txHash))
 			return receipt, err
 		}
 		retryMaxTimes--
