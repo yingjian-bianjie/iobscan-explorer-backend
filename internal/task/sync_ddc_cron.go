@@ -64,13 +64,13 @@ func (d *SyncDdcTask) loadEvmConfig() {
 func (d *SyncDdcTask) Start() {
 	d.loadEvmConfig()
 
-	handleDdc := func() {
+	handleDdc := func() (value int64) {
 		//logger.Debug("sync ddc cron task start...")
 		defer func() {
 			if err := recover(); err != nil {
-				logger.Error("occur error", logger.Any("err", err))
 				//alarm events send
-				monitor.SetCronTaskStatusMetricValue(d.Name(), -1)
+				value = -1
+				logger.Error("occur error", logger.Any("err", err))
 			}
 			//logger.Debug("sync ddc cron task exit...")
 		}()
@@ -78,21 +78,21 @@ func (d *SyncDdcTask) Start() {
 		follow, err := d.syncTask.QueryValidFollowTasks()
 		if err != nil {
 			logger.Error("failed to get ValidFollowTasks " + err.Error())
-			return
+			return -1
 		}
 		if !follow {
 			logger.Warn("waiting sync working is follow......")
-			return
+			return 1
 		}
 		ddcLatestHeight, err := d.getDdcLatestHeight()
 		if err != nil {
 			logger.Error("failed to get DdcLatestHeight " + err.Error())
-			return
+			return -1
 		}
 		maxHeight, err := d.getMaxHeight()
 		if err != nil {
 			logger.Error("failed to get MaxHeight " + err.Error())
-			return
+			return -1
 		}
 
 		if maxHeight > 0 && ddcLatestHeight < maxHeight {
@@ -101,15 +101,15 @@ func (d *SyncDdcTask) Start() {
 				if err != mgo.ErrNotFound && err != constant.ErrDbExist {
 					logger.Error("failed to handle Txs " + err.Error())
 				}
-				monitor.SetCronTaskStatusMetricValue(d.Name(), -1)
-				return
+				return -1
 			}
 		}
-		monitor.SetCronTaskStatusMetricValue(d.Name(), 1)
+		return 1
 	}
 
 	util.RunTimer(d.Cron(), util.Sec, func() {
-		handleDdc()
+		metrics := handleDdc()
+		monitor.SetCronTaskStatusMetricValue(d.Name(), float64(metrics))
 	})
 
 }
