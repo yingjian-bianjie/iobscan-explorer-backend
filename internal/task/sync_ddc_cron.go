@@ -69,6 +69,8 @@ func (d *SyncDdcTask) Start() {
 		defer func() {
 			if err := recover(); err != nil {
 				logger.Error("occur error", logger.Any("err", err))
+				//alarm events send
+				monitor.SetCronTaskStatusMetricValue(d.Name(), -1)
 			}
 			//logger.Debug("sync ddc cron task exit...")
 		}()
@@ -143,6 +145,9 @@ func (d *SyncDdcTask) handleTxs(txs []repository.Tx) error {
 	return nil
 }
 func (d *SyncDdcTask) parseContractsInput(inputDataStr string, doctx *contracts.DocMsgEthereumTx) error {
+	if len(inputDataStr) <= 8 {
+		return constant.SkipErrmsgABIMethodNoFound
+	}
 	ddcMethodId := inputDataStr[:8]
 	abiServe, ok := d.contractABIsMap[doctx.ContractAddr]
 	if !ok {
