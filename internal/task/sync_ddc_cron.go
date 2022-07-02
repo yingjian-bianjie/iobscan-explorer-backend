@@ -153,20 +153,25 @@ func (d *SyncDdcTask) parseContractsInput(inputDataStr string, doctx *contracts.
 	if !ok {
 		return constant.SkipErrmsgNoSupportContract
 	}
-	methodMap, err := contracts.GetDDCSupportMethod(abiServe)
-	if err != nil {
-		return err
-	}
+	methodMap := contracts.GetDDCSupportMethod(abiServe)
 	if val, ok := methodMap[ddcMethodId]; ok {
 		doctx.Method = val.Name
 		inputData, err := hex.DecodeString(inputDataStr[8:])
 		if err != nil {
-			return err
+			logger.Error("decode input fail ,"+err.Error(),
+				logger.String("ddcMethod", val.Name),
+				logger.String("input", inputDataStr[8:]),
+				logger.String("contract", doctx.ContractAddr))
+			return constant.SkipErrmsgABIMethodNoFound
 		}
 
 		inputs, err := val.Inputs.Unpack(inputData)
 		if err != nil {
-			return err
+			logger.Error("unpack input fail ,"+err.Error(),
+				logger.String("ddcMethod", val.Name),
+				logger.String("input", string(inputData)),
+				logger.String("contract", doctx.ContractAddr))
+			return constant.SkipErrmsgABIMethodNoFound
 		}
 
 		for _, val := range inputs {
