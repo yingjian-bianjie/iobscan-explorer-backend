@@ -146,7 +146,7 @@ func (d *SyncDdcTask) handleTxs(txs []repository.Tx) error {
 }
 func (d *SyncDdcTask) parseContractsInput(inputDataStr string, doctx *contracts.DocMsgEthereumTx) error {
 	if len(inputDataStr) <= 8 {
-		return constant.SkipErrmsgABIMethodNoFound
+		return fmt.Errorf("input data invalid,input:%s\n", inputDataStr)
 	}
 	ddcMethodId := inputDataStr[:8]
 	abiServe, ok := d.contractABIsMap[doctx.ContractAddr]
@@ -158,20 +158,12 @@ func (d *SyncDdcTask) parseContractsInput(inputDataStr string, doctx *contracts.
 		doctx.Method = val.Name
 		inputData, err := hex.DecodeString(inputDataStr[8:])
 		if err != nil {
-			logger.Error("decode input fail ,"+err.Error(),
-				logger.String("ddcMethod", val.Name),
-				logger.String("input", inputDataStr[8:]),
-				logger.String("contract", doctx.ContractAddr))
-			return constant.SkipErrmsgABIMethodNoFound
+			return fmt.Errorf("input parser error,method:%s input:%s\n", val.Name, string(inputData))
 		}
 
 		inputs, err := val.Inputs.Unpack(inputData)
 		if err != nil {
-			logger.Error("unpack input fail ,"+err.Error(),
-				logger.String("ddcMethod", val.Name),
-				logger.String("input", string(inputData)),
-				logger.String("contract", doctx.ContractAddr))
-			return constant.SkipErrmsgABIMethodNoFound
+			return fmt.Errorf("input parser error,method:%s input:%s\n", val.Name, string(inputData))
 		}
 
 		for _, val := range inputs {
@@ -208,9 +200,9 @@ func (d *SyncDdcTask) handleOneMsg(msg repository.TxMsg, tx *repository.Tx) ([]r
 
 	inputDataStr := hex.EncodeToString(common.CopyBytes(txData.Data))
 	if err := d.parseContractsInput(inputDataStr, &msgEtheumTx); err != nil {
-		if err != constant.SkipErrmsgNoSupportContract && err != constant.SkipErrmsgABIMethodNoFound {
-			return ddcsInfo, evmDatas, err
-		}
+		//if err != constant.SkipErrmsgNoSupportContract && err != constant.SkipErrmsgABIMethodNoFound {
+		//	return ddcsInfo, evmDatas, err
+		//}
 		// skip msg when no support
 		logger.Warn(err.Error()+fmt.Sprint(" height: ", tx.Height, " txHash: ", tx.TxHash),
 			logger.String("contract_address", txData.To))
