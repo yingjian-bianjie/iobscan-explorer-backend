@@ -9,12 +9,12 @@ import (
 	"strings"
 )
 
-func GetDDCSupportMethod(abiServe abi.ABI) (map[string]abi.Method, error) {
+func GetDDCSupportMethod(abiServe abi.ABI) map[string]abi.Method {
 	methodMap := make(map[string]abi.Method)
 	for _, method := range abiServe.Methods {
 		methodMap[hex.EncodeToString(method.ID)] = method
 	}
-	return methodMap, nil
+	return methodMap
 }
 
 func NeedRetryCallGetDdcIds(msgEtheumTx DocMsgEthereumTx) []uint64 {
