@@ -1,0 +1,6 @@
+[app]
+addr = "0.0.0.0:8080"
+log_level = "debug"
+prometheus_port = 9100
+enable_signature = false
+api_key = "iobscan-explorer-backend"
