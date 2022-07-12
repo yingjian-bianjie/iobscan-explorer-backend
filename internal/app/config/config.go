@@ -2,12 +2,15 @@ package config
 
 import (
 	"bytes"
+
 	"github.com/spf13/viper"
 )
 
 type Config struct {
 	App     App
 	Mongodb MongoDB
+	Lcd     Lcd
+	Irishub Irishub
 }
 
 type App struct {
@@ -24,6 +27,18 @@ type MongoDB struct {
 	Username string `mapstructure:"username"`
 	Password string `mapstructure:"password"`
 	Database string `mapstructure:"database"`
+}
+
+type Lcd struct {
+	Backend        string `mapstructure:"backend"`
+	BondTokensUrl  string `mapstructure:"bond_tokens_url"`
+	TotalSupplyUrl string `mapstructure:"total_supply_url"`
+}
+
+type Irishub struct {
+	RpcAddr  string `mapstructure:"rpc_addr"`
+	GrpcAddr string `mapstructure:"grpc_addr"`
+	ChainId  string `mapstructure:"chain_id"`
 }
 
 func ReadConfig(data []byte) (*Config, error) {
