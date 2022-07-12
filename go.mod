@@ -9,5 +9,6 @@ require (
 	github.com/sirupsen/logrus v1.8.1
 	github.com/spf13/cobra v1.5.0
 	github.com/spf13/viper v1.12.0
+	github.com/weichang-bianjie/metric-sdk v1.0.1
 	github.com/xeipuuv/gojsonschema v1.2.0
 )

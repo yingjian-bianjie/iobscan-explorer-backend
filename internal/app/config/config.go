@@ -6,14 +6,24 @@ import (
 )
 
 type Config struct {
-	App App
+	App     App
+	Mongodb MongoDB
 }
+
 type App struct {
 	Addr            string
 	LogLevel        string `mapstructure:"log_level"`
 	PrometheusPort  int    `mapstructure:"prometheus_port"`
 	ApiKey          string `mapstructure:"api_key"`
 	EnableSignature bool   `mapstructure:"enable_signature"`
+}
+
+type MongoDB struct {
+	Host     string `mapstructure:"host"`
+	Port     int    `mapstructure:"port"`
+	Username string `mapstructure:"username"`
+	Password string `mapstructure:"password"`
+	Database string `mapstructure:"database"`
 }
 
 func ReadConfig(data []byte) (*Config, error) {
