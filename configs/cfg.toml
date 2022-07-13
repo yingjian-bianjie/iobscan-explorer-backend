@@ -6,10 +6,7 @@ enable_signature = false
 api_key = "iobscan-explorer-backend"
 
 [mongodb]
-host = "192.168.150.40"
-port = 27017
-username = "wcchain"
-password = "wcchainPassword"
+url = "mongodb://wcchain:wcchainPassword@192.168.150.40:27017/?authSource=iobscan_wcchain"
 database = "iobscan_wcchain"
 
 [lcd]
@@ -18,7 +15,10 @@ bond_tokens_url = "/cosmos/staking/v1beta1/pool"
 total_supply_url = "/cosmos/bank/v1beta1/supply"
 community_pool_url = "/cosmos/distribution/v1beta1/community_pool"
 
-[irishub]
+[blockchain]
 rpc_addr = "http://192.168.0.129:26657"
 grpc_addr = "192.168.0.129:9090"
 chain_id = "irishub-qa"
+
+[task]
+cron_jobs = "ex_sync_denom,ex_sync_nft"

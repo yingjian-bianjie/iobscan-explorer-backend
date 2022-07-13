@@ -1,4 +1,4 @@
-package irishub
+package blockchain
 
 import (
 	"context"
@@ -8,10 +8,10 @@ import (
 )
 
 func TestMain(m *testing.M) {
-	cfg := &config.Irishub{
+	cfg := &config.BlockChain{
 		RpcAddr:  "http://seed-2.mainnet.irisnet.org:26657",
 		GrpcAddr: "seed-2.mainnet.irisnet.org:9090",
-		ChainId:  "irishub-1",
+		ChainId:  "blockchain-1",
 	}
 
 	InitClient(cfg)

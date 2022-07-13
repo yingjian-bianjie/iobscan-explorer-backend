@@ -8,33 +8,27 @@ import (
 	"github.com/qiniu/qmgo"
 )
 
-var MgoCli *qmgo.Client
+var mgoCli *qmgo.Client
 
 func InitQMgo(config *conf.MongoDB) {
 	var maxPoolSize uint64 = 4096
-	dsn := fmt.Sprintf("mongodb://%s:%s@%s:%d/?connect=direct&authSource=%s",
-		config.Username,
-		config.Password,
-		config.Host,
-		config.Port,
-		config.Database,
-	)
 	cli, err := qmgo.NewClient(context.Background(), &qmgo.Config{
-		Uri:         dsn,
+		Uri:         config.Url,
 		MaxPoolSize: &maxPoolSize,
 	})
 	if err != nil {
 		fmt.Println(err)
 	}
-	MgoCli = cli
+	InitRepo(cli, config.Database)
+	mgoCli = cli
 }
 
 func GetClient() *qmgo.Client {
-	return MgoCli
+	return mgoCli
 }
 
 func MongoDbStatus() bool {
-	err := MgoCli.Ping(5)
+	err := mgoCli.Ping(5)
 	if err != nil {
 		return false
 	}

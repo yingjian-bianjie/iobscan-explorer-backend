@@ -7,10 +7,11 @@ import (
 )
 
 type Config struct {
-	App     App
-	Mongodb MongoDB
-	Lcd     Lcd
-	Irishub Irishub
+	App        App
+	Mongodb    MongoDB
+	Lcd        Lcd
+	BlockChain BlockChain
+	Task       Task
 }
 
 type App struct {
@@ -22,10 +23,7 @@ type App struct {
 }
 
 type MongoDB struct {
-	Host     string `mapstructure:"host"`
-	Port     int    `mapstructure:"port"`
-	Username string `mapstructure:"username"`
-	Password string `mapstructure:"password"`
+	Url      string `mapstructure:"database"`
 	Database string `mapstructure:"database"`
 }
 
@@ -35,10 +33,14 @@ type Lcd struct {
 	TotalSupplyUrl string `mapstructure:"total_supply_url"`
 }
 
-type Irishub struct {
+type BlockChain struct {
 	RpcAddr  string `mapstructure:"rpc_addr"`
 	GrpcAddr string `mapstructure:"grpc_addr"`
 	ChainId  string `mapstructure:"chain_id"`
+}
+
+type Task struct {
+	CronJobs string `mapstructure:"cron_jobs"`
 }
 
 func ReadConfig(data []byte) (*Config, error) {

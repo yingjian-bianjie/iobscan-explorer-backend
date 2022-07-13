@@ -1,4 +1,4 @@
-package irishub
+package blockchain
 
 import (
 	"github.com/bianjieai/iobscan-explorer-backend/internal/app/config"
@@ -9,7 +9,7 @@ import (
 
 var irishubCli *sdk.IRISHUBClient
 
-func InitClient(c *config.Irishub) {
+func InitClient(c *config.BlockChain) {
 	options := []types.Option{
 		types.KeyDAOOption(store.NewMemory(nil)),
 		types.TimeoutOption(10),

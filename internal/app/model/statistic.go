@@ -30,3 +30,14 @@ type DenomAmount struct {
 	Denom  string `bson:"denom"`
 	Amount string `bson:"amount"`
 }
+
+type AllTxStatisticsInfoType struct {
+	RecordHeight         int64 `json:"record_height"`
+	RecordHeightBlockTxs int64 `json:"record_height_block_txs"`
+}
+
+type ExTxType struct {
+	TypeName string `bson:"type_name"`
+	TypeCn   string `bson:"type_cn"`
+	TypeEn   string `bson:"type_en"`
+}
