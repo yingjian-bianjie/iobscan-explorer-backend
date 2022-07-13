@@ -41,3 +41,13 @@ type ExTxType struct {
 	TypeCn   string `bson:"type_cn"`
 	TypeEn   string `bson:"type_en"`
 }
+
+type ExTxTypes []ExTxType
+
+func (types ExTxTypes) GetExTypeList() []string {
+	res := make([]string, 0, len(types))
+	for _, v := range types {
+		res = append(res, v.TypeName)
+	}
+	return res
+}

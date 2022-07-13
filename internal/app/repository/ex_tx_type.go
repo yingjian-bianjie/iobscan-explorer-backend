@@ -15,19 +15,15 @@ func NewExTxTypeRepo(cli *qmgo.Client, database string) IExTxTypeRepo {
 }
 
 type IExTxTypeRepo interface {
-	QueryTxTypeList() ([]string, error)
+	QueryTxTypeList() ([]model.ExTxType, error)
 }
 
 type exTxTypeRepo struct {
 	coll *qmgo.Collection
 }
 
-func (repo *exTxTypeRepo) QueryTxTypeList() ([]string, error) {
+func (repo *exTxTypeRepo) QueryTxTypeList() ([]model.ExTxType, error) {
 	var typeList []model.ExTxType
 	err := repo.coll.Find(ctx, bson.M{}).All(&typeList)
-	var txTypeList = make([]string, 0, len(typeList))
-	for _, txType := range typeList {
-		txTypeList = append(txTypeList, txType.TypeName)
-	}
-	return txTypeList, err
+	return typeList, err
 }

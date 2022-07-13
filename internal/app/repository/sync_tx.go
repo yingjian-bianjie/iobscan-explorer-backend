@@ -2,10 +2,10 @@ package repository
 
 import (
 	"context"
+
 	"github.com/bianjieai/iobscan-explorer-backend/internal/app/enum"
 	"github.com/bianjieai/iobscan-explorer-backend/internal/app/model"
 	"github.com/qiniu/qmgo"
-	"github.com/sirupsen/logrus"
 	"go.mongodb.org/mongo-driver/bson"
 )
 
@@ -18,8 +18,8 @@ func NewSyncTxRepo(cli *qmgo.Client, database string) ISyncTxRepo {
 }
 
 type ISyncTxRepo interface {
-	QueryIncreTxCount(height int64) (int64, error)
-	QueryTxCountStatistics() (int64, error)
+	QueryIncreTxCount(typeList []string, height int64) (int64, error)
+	QueryTxCountStatistics(typeList []string) (int64, error)
 	QueryTxCountWithHeight(height int64) (int64, error)
 	QueryLatestHeight(height int64) (*model.SyncTx, error)
 	QueryServiceCount() (int64, error)
@@ -29,14 +29,10 @@ type syncTxRepo struct {
 	coll *qmgo.Collection
 }
 
-func (repo *syncTxRepo) QueryIncreTxCount(height int64) (int64, error) {
-	list, err := ExTxTypeRepo.QueryTxTypeList()
-	if err != nil {
-		logrus.Errorf("QueryTxTypeList err:%s", err.Error())
-	}
+func (repo *syncTxRepo) QueryIncreTxCount(typeList []string, height int64) (int64, error) {
 	q := bson.M{
 		"msgs.type": bson.M{
-			"$in": list,
+			"$in": typeList,
 		},
 		"height": bson.M{
 			"$gte": height,
@@ -46,14 +42,11 @@ func (repo *syncTxRepo) QueryIncreTxCount(height int64) (int64, error) {
 	return count, err
 }
 
-func (repo *syncTxRepo) QueryTxCountStatistics() (int64, error) {
-	list, err := ExTxTypeRepo.QueryTxTypeList()
-	if err != nil {
-		logrus.Errorf("QueryTxTypeList err:%s", err.Error())
-	}
+func (repo *syncTxRepo) QueryTxCountStatistics(typeList []string) (int64, error) {
+
 	m := bson.M{}
 	m["msgs.type"] = bson.M{
-		"$in": list,
+		"$in": typeList,
 	}
 	count, err := repo.coll.Find(ctx, m).Count()
 	return count, err
