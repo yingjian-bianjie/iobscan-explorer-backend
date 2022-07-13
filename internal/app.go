@@ -2,7 +2,6 @@ package app
 
 import (
 	"github.com/bianjieai/iobscan-explorer-backend/internal/app/api"
-	"github.com/bianjieai/iobscan-explorer-backend/internal/app/blockchain"
 	"github.com/bianjieai/iobscan-explorer-backend/internal/app/config"
 	"github.com/bianjieai/iobscan-explorer-backend/internal/app/constant"
 	"github.com/bianjieai/iobscan-explorer-backend/internal/app/global"
@@ -24,8 +23,6 @@ func Serve(cfg *config.Config) {
 	repository.InitQMgo(&cfg.Mongodb)
 
 	lcd.Init(&cfg.Lcd)
-
-	blockchain.InitClient(&cfg.BlockChain)
 
 	server := api.NewApiServer(&cfg.App)
 	server.Start()
