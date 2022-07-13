@@ -23,7 +23,7 @@ type App struct {
 }
 
 type MongoDB struct {
-	Url      string `mapstructure:"database"`
+	Url      string `mapstructure:"url"`
 	Database string `mapstructure:"database"`
 }
 
