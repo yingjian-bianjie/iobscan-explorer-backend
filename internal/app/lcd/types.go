@@ -13,3 +13,10 @@ type Supply struct {
 		Amount string `json:"amount"`
 	} `json:"supply"`
 }
+
+type CommunityPool struct {
+	Pool []struct {
+		Denom  string `json:"denom"`
+		Amount string `json:"amount"`
+	} `json:"pool"`
+}

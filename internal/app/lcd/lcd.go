@@ -9,15 +9,17 @@ import (
 )
 
 var (
-	backend        = "http://34.77.68.145:1317/"
-	bondTokensUrl  = "/cosmos/staking/v1beta1/pool"
-	totalSupplyUrl = "/cosmos/bank/v1beta1/supply"
+	backend          = "http://34.77.68.145:1317/"
+	bondTokensUrl    = "/cosmos/staking/v1beta1/pool"
+	totalSupplyUrl   = "/cosmos/bank/v1beta1/supply"
+	communityPoolUrl = "/cosmos/distribution/v1beta1/community_pool"
 )
 
 func Init(cfg *config.Lcd) {
 	backend = cfg.Backend
 	bondTokensUrl = cfg.BondTokensUrl
 	totalSupplyUrl = cfg.TotalSupplyUrl
+	communityPoolUrl = cfg.CommunityPoolUrl
 }
 
 func GetTotalSupply() (*Supply, error) {
@@ -38,4 +40,14 @@ func GetBondedTokens() (*BondTokens, error) {
 	}
 	err = json.Unmarshal(bytes, &bondTokens)
 	return &bondTokens, err
+}
+
+func GetCommunityPool() (*CommunityPool, error) {
+	var pool CommunityPool
+	bytes, err := utils.HttpGet(fmt.Sprintf(fmt.Sprintf("%s%s", backend, communityPoolUrl)))
+	if err != nil {
+		return nil, err
+	}
+	err = json.Unmarshal(bytes, &pool)
+	return &pool, err
 }

@@ -28,9 +28,10 @@ type MongoDB struct {
 }
 
 type Lcd struct {
-	Backend        string `mapstructure:"backend"`
-	BondTokensUrl  string `mapstructure:"bond_tokens_url"`
-	TotalSupplyUrl string `mapstructure:"total_supply_url"`
+	Backend          string `mapstructure:"backend"`
+	BondTokensUrl    string `mapstructure:"bond_tokens_url"`
+	TotalSupplyUrl   string `mapstructure:"total_supply_url"`
+	CommunityPoolUrl string `mapstructure:"community_pool_url"`
 }
 
 type BlockChain struct {

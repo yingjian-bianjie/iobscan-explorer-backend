@@ -41,3 +41,22 @@ type ExTxType struct {
 	TypeCn   string `bson:"type_cn"`
 	TypeEn   string `bson:"type_en"`
 }
+
+type Tokens struct {
+	Denom       string `bson:"denom"`
+	IsMainToken bool   `bson:"is_main_token"`
+	Chain       string `bson:"chain"`
+}
+
+type SyncBlock struct {
+	Height int64 `json:"height"`
+}
+
+type TxMsgsCount struct {
+	Count int64 `bson:"count"`
+}
+
+type TxMsgsInfo struct {
+	RecordHeight       int64 `json:"record_height"`
+	RecordHeightTxMsgs int64 `json:"record_height_tx_msgs"`
+}

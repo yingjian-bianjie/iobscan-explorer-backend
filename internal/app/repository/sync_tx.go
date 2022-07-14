@@ -23,10 +23,61 @@ type ISyncTxRepo interface {
 	QueryTxCountWithHeight(height int64) (int64, error)
 	QueryLatestHeight(height int64) (*model.SyncTx, error)
 	QueryServiceCount() (int64, error)
+	QueryTxMsgsCountByHeight(height int64) ([]model.TxMsgsCount, error)
+	QueryTxMsgsIncre(height int64) ([]model.TxMsgsCount, error)
 }
 
 type syncTxRepo struct {
 	coll *qmgo.Collection
+}
+
+func (repo *syncTxRepo) QueryTxMsgsIncre(height int64) ([]model.TxMsgsCount, error) {
+	q := []bson.M{
+		{
+			"$sort": bson.M{
+				"height": 1,
+			},
+		},
+		{
+			"$match": bson.M{
+				"height": bson.M{"$gte": height},
+			},
+		},
+		{
+			"$unwind": "$msgs",
+		},
+		{
+			"$group": bson.M{
+				"_id":   "",
+				"count": bson.M{"$sum": 1},
+			},
+		},
+	}
+	var txMsgs []model.TxMsgsCount
+	err := repo.coll.Aggregate(ctx, q).All(&txMsgs)
+	return txMsgs, err
+}
+
+func (repo *syncTxRepo) QueryTxMsgsCountByHeight(height int64) ([]model.TxMsgsCount, error) {
+	q := []bson.M{
+		{
+			"$match": bson.M{
+				"height": height,
+			},
+		},
+		{
+			"$unwind": "$msgs",
+		},
+		{
+			"$group": bson.M{
+				"_id":   "",
+				"count": bson.M{"$sum": 1},
+			},
+		},
+	}
+	var txMsgs []model.TxMsgsCount
+	err := repo.coll.Aggregate(ctx, q).All(&txMsgs)
+	return txMsgs, err
 }
 
 func (repo *syncTxRepo) QueryIncreTxCount(typeList []string, height int64) (int64, error) {

@@ -7,6 +7,7 @@ import (
 	"github.com/bianjieai/iobscan-explorer-backend/internal/app/global"
 	"github.com/bianjieai/iobscan-explorer-backend/internal/app/lcd"
 	"github.com/bianjieai/iobscan-explorer-backend/internal/app/repository"
+	"github.com/bianjieai/iobscan-explorer-backend/internal/app/task"
 	"github.com/sirupsen/logrus"
 )
 
@@ -23,6 +24,9 @@ func Serve(cfg *config.Config) {
 	repository.InitQMgo(&cfg.Mongodb)
 
 	lcd.Init(&cfg.Lcd)
+
+	task.RegisterCron(&task.StatisticTask{})
+	task.CronStart()
 
 	server := api.NewApiServer(&cfg.App)
 	server.Start()

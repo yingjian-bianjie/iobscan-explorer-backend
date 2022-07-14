@@ -12,6 +12,8 @@ var (
 	ExStakingValidatorRepo IExStakingValidatorRepo
 	SyncTaskRepo           ISyncTaskRepo
 	StatisticRepo          IStatisticRepo
+	ExTokensRepo           IExTokensRepo
+	SyncBlockRepo          ISyncBlockRepo
 )
 
 func InitRepo(cli *qmgo.Client, database string) {
@@ -24,4 +26,6 @@ func InitRepo(cli *qmgo.Client, database string) {
 	ExStakingValidatorRepo = NewExStakingValidatorRepo(cli, database)
 	SyncTaskRepo = NewSyncTaskRepo(cli, database)
 	StatisticRepo = NewStatisticRepo(cli, database)
+	ExTokensRepo = NewExTokensRepo(cli, database)
+	SyncBlockRepo = NewSyncBlockRepo(cli, database)
 }
